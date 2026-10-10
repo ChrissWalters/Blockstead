@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // first start the server with: ./gradlew runServer --debug-jvm  (waits for the debugger on port 5005)
+      "type": "java",
+      "name": "Attach to test server",
+      "request": "attach",
+      "hostName": "localhost",
+      "port": 5005,
+      "projectName": "blockstead"
+    }
+  ]
+}

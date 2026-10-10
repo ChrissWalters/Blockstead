@@ -1,0 +1,463 @@
+package com.github.chrisswalters.blockstead.plots;
+
+import com.github.chrisswalters.blockstead.config.PluginConfig;
+import com.github.chrisswalters.blockstead.economy.EconomyService;
+import com.github.chrisswalters.blockstead.roles.PlotRight;
+import com.github.chrisswalters.blockstead.roles.PlotRole;
+import com.github.chrisswalters.blockstead.roles.RoleService;
+import com.github.chrisswalters.blockstead.storage.DataException;
+import com.github.chrisswalters.blockstead.storage.Database;
+import com.github.chrisswalters.blockstead.util.PlayerLookup;
+import com.github.chrisswalters.blockstead.util.WorldGuardUtils;
+import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldguard.protection.managers.RegionManager;
+import com.sk89q.worldguard.protection.managers.storage.StorageException;
+import com.sk89q.worldguard.protection.regions.ProtectedRegion;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.World;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+
+import java.io.IOException;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ * Verwaltung bestehender Grundstücke: finden, kaufen ({@code claim}), zuweisen ({@code assign}),
+ * freigeben ({@code unclaim}/{@code unassign}) und löschen ({@code remove}).
+ * Angelegt werden Grundstücke über {@link CreatePlot}.
+ *
+ * <p>Besitzende und Mitglieder stehen in WorldGuard. Rollen unterhalb von "besitzende" sind
+ * WorldGuard-Mitglieder mit zusätzlich gespeicherter Rolle ({@link RoleService}), vergeben über
+ * {@link #trust} und entzogen über {@link #untrust}. In der Tabelle {@code plot_claims} steht, wer ein
+ * Grundstück für welchen Preis gekauft hat; beim Freigeben oder Löschen bekommt genau diese Person
+ * den Betrag zurück.
+ *
+ * <p>Methoden mit {@link CommandSender}-Parameter schicken ihre Rückmeldungen direkt an diesen.
+ */
+public class PlotService {
+
+    private final Database database;
+    private final EconomyService economy;
+    private final HomeService homes;
+    private final RoleService roles;
+    private final SnapshotService snapshots;
+    private final PluginConfig config;
+    private final Logger log;
+
+    public PlotService(Database database, EconomyService economy, HomeService homes, RoleService roles,
+                       SnapshotService snapshots, PluginConfig config, Logger log) {
+        this.database = database;
+        this.economy = economy;
+        this.homes = homes;
+        this.roles = roles;
+        this.snapshots = snapshots;
+        this.config = config;
+        this.log = log;
+    }
+
+    // ---------------------------------------------------------------- Abfragen
+
+    /** Grundstück mit der ID in der Welt; leer, wenn es keins gibt oder die Region kein Grundstück ist. */
+    public Optional<Plot> getPlot(World world, String plotId) {
+        String id = plotId.toLowerCase();
+        RegionManager manager = WorldGuardUtils.getRegionManager(world);
+        if (manager == null || !id.startsWith(CreatePlot.PLOT_PREFIX)) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(manager.getRegion(id)).map(region -> new Plot(world, region));
+    }
+
+    /** Grundstück an der Position; leer, wenn dort keins ist. */
+    public Optional<Plot> getPlotAt(Location location) {
+        RegionManager manager = WorldGuardUtils.getRegionManager(location.getWorld());
+        if (manager == null) {
+            return Optional.empty();
+        }
+        for (String id : WorldGuardUtils.getRegionsAtLocation(location)) {
+            if (id.startsWith(CreatePlot.PLOT_PREFIX)) {
+                return Optional.of(new Plot(location.getWorld(), manager.getRegion(id)));
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** Alle Grundstücke einer Welt, sortiert nach Nummer. */
+    public List<Plot> getPlots(World world) {
+        List<Plot> plots = new ArrayList<>();
+        RegionManager manager = WorldGuardUtils.getRegionManager(world);
+        if (manager != null) {
+            for (ProtectedRegion region : manager.getRegions().values()) {
+                if (region.getId().startsWith(CreatePlot.PLOT_PREFIX)) {
+                    plots.add(new Plot(world, region));
+                }
+            }
+        }
+        plots.sort(Comparator.comparingInt(PlotService::plotNumber));
+        return plots;
+    }
+
+    /** Alle Grundstücke in allen Welten, die {@code uuid} besitzt. */
+    public List<Plot> getOwnedPlots(UUID uuid) {
+        List<Plot> owned = new ArrayList<>();
+        for (World world : Bukkit.getWorlds()) {
+            for (Plot plot : getPlots(world)) {
+                if (plot.isOwner(uuid)) {
+                    owned.add(plot);
+                }
+            }
+        }
+        return owned;
+    }
+
+    /**
+     * Ob die Person auf dem Grundstück das Recht hat: Besitzende immer, Mitglieder je nach Rolle,
+     * alle anderen nie (die sperrt WorldGuard aus).
+     */
+    public boolean hasRight(Plot plot, UUID uuid, PlotRight right) {
+        if (plot.isOwner(uuid)) {
+            return true;
+        }
+        return plot.region().getMembers().contains(uuid) && roles.memberHasRight(plot, uuid, right);
+    }
+
+    /** Rolle der Person als Text, z.B. "Besitzende", "Gast"; {@code null} ohne Rolle. */
+    public String describeRole(Plot plot, UUID uuid) {
+        if (plot.isOwner(uuid)) {
+            return "Besitzende";
+        }
+        return plot.region().getMembers().contains(uuid) ? roles.describeMember(plot, uuid) : null;
+    }
+
+    // ---------------------------------------------------------------- Ändern
+
+    /** Kauft ein freies Grundstück zum Preis aus der config.yml. */
+    public boolean claim(Player player, Plot plot) {
+        if (!plot.isFree()) {
+            player.sendMessage("Grundstück " + plot.id() + " ist bereits vergeben.");
+            return false;
+        }
+        long price = config.getPlotPrice();
+        if (!economy.withdraw(player.getUniqueId(), price)) {
+            player.sendMessage("Du hast nicht genug Guthaben: " + plot.id() + " kostet " + economy.format(price)
+                    + ", du hast " + economy.format(economy.getBalance(player.getUniqueId())) + ".");
+            return false;
+        }
+        if (price > 0) {
+            saveClaim(plot, player.getUniqueId(), price);
+        }
+        plot.region().getOwners().addPlayer(player.getUniqueId());
+        saveRegions(plot.world());
+
+        player.sendMessage("Grundstück " + plot.id() + " gehört jetzt dir. Bezahlt: " + economy.format(price)
+                + ", Guthaben: " + economy.format(economy.getBalance(player.getUniqueId())) + ".");
+        log.info(player.getName() + " hat " + plot.id() + " in " + plot.world().getName() + " für " + price + " gekauft");
+        return true;
+    }
+
+    /** Weist ein freies Grundstück kostenlos zu (Team-Befehl). */
+    public boolean assign(CommandSender sender, Plot plot, OfflinePlayer target) {
+        if (!plot.isFree()) {
+            sender.sendMessage("Grundstück " + plot.id() + " ist bereits vergeben. Erst mit /plot unassign freigeben.");
+            return false;
+        }
+        plot.region().getOwners().addPlayer(target.getUniqueId());
+        saveRegions(plot.world());
+
+        String name = PlayerLookup.nameOf(target.getUniqueId());
+        sender.sendMessage("Grundstück " + plot.id() + " wurde " + name + " zugewiesen.");
+        if (target.getPlayer() != null && target.getPlayer() != sender) {
+            target.getPlayer().sendMessage("Dir wurde das Grundstück " + plot.id() + " zugewiesen.");
+        }
+        log.info(sender.getName() + " hat " + plot.id() + " in " + plot.world().getName() + " an " + name + " vergeben");
+        return true;
+    }
+
+    /**
+     * Gibt ein Grundstück frei: entfernt alle Besitzenden, Mitglieder, Rollen und Homes darauf und erstattet
+     * den Kaufpreis an die Person, die bezahlt hat.
+     *
+     * @param reset {@code true}: Inhalt auf die Sicherung zurücksetzen ({@link SnapshotService});
+     *              {@code false}: Inhalt bleibt unverändert. Schlägt das Zurücksetzen fehl, wird nichts freigegeben.
+     */
+    public boolean release(CommandSender sender, Plot plot, boolean reset) {
+        if (plot.isFree()) {
+            sender.sendMessage("Grundstück " + plot.id() + " ist bereits frei.");
+            return false;
+        }
+        if (reset && !resetToSnapshot(sender, plot)) {
+            return false;
+        }
+        refundClaim(plot);
+        homes.deleteHomesOnPlot(plot);
+        roles.deleteRolesOnPlot(plot);
+        plot.region().getOwners().clear();
+        plot.region().getMembers().clear();
+        saveRegions(plot.world());
+
+        sender.sendMessage("Grundstück " + plot.id() + " ist jetzt wieder frei" + (reset ? " und zurückgesetzt." : "."));
+        log.info(sender.getName() + " hat " + plot.id() + " in " + plot.world().getName() + " freigegeben" + (reset ? " und zurückgesetzt" : ""));
+        return true;
+    }
+
+    /**
+     * Vergibt eine Rolle auf dem Grundstück. {@code roleKey} ist "besitzende" oder ein Schlüssel aus der
+     * config.yml. Eine bisherige Rolle der Person wird ersetzt; die letzte besitzende Person kann nicht
+     * herabgestuft werden.
+     */
+    public boolean trust(CommandSender sender, Plot plot, OfflinePlayer target, String roleKey) {
+        UUID uuid = target.getUniqueId();
+        String name = PlayerLookup.nameOf(uuid);
+        String displayName;
+
+        if (roleKey.equals(PlotRole.OWNER_KEY)) {
+            plot.region().getMembers().removePlayer(uuid);
+            plot.region().getOwners().addPlayer(uuid);
+            roles.removeRole(plot, uuid);
+            displayName = "Besitzende";
+        } else {
+            PlotRole role = config.getRoles().get(roleKey);
+            if (role == null) {
+                sender.sendMessage("Unbekannte Rolle '" + roleKey + "'. Möglich: " + roleKeys());
+                return false;
+            }
+            if (plot.isOwner(uuid)) {
+                if (isLastOwner(plot, uuid)) {
+                    sender.sendMessage(name + " ist die einzige besitzende Person von " + plot.id()
+                            + " und kann nicht herabgestuft werden. Zum Abgeben: /plot unclaim");
+                    return false;
+                }
+                plot.region().getOwners().removePlayer(uuid);
+            }
+            plot.region().getMembers().addPlayer(uuid);
+            roles.setRole(plot, uuid, role.key());
+            displayName = role.displayName();
+            // Ohne Home-Recht ist ein Home auf diesem Grundstück nicht mehr gültig
+            if (!role.has(PlotRight.HOME)) {
+                homes.deleteHomeIfOnPlot(uuid, plot);
+            }
+        }
+        saveRegions(plot.world());
+
+        sender.sendMessage(name + " hat auf " + plot.id() + " jetzt die Rolle " + displayName + ".");
+        Player online = target.getPlayer();
+        if (online != null && online != sender) {
+            online.sendMessage("Du hast auf Grundstück " + plot.id() + " jetzt die Rolle " + displayName + ".");
+        }
+        log.info(sender.getName() + ": " + name + " auf " + plot.id() + " in " + plot.world().getName() + " -> " + displayName);
+        return true;
+    }
+
+    /** Entzieht der Person jede Rolle auf dem Grundstück (Besitz, Mitgliedschaft, Home darauf). */
+    public boolean untrust(CommandSender sender, Plot plot, OfflinePlayer target) {
+        UUID uuid = target.getUniqueId();
+        String name = PlayerLookup.nameOf(uuid);
+        if (plot.isOwner(uuid)) {
+            if (isLastOwner(plot, uuid)) {
+                sender.sendMessage(name + " ist die einzige besitzende Person von " + plot.id() + ". Zum Abgeben: /plot unclaim");
+                return false;
+            }
+            plot.region().getOwners().removePlayer(uuid);
+        } else if (plot.region().getMembers().contains(uuid)) {
+            plot.region().getMembers().removePlayer(uuid);
+        } else {
+            sender.sendMessage(name + " hat auf " + plot.id() + " keine Rolle.");
+            return false;
+        }
+        roles.removeRole(plot, uuid);
+        homes.deleteHomeIfOnPlot(uuid, plot);
+        saveRegions(plot.world());
+
+        sender.sendMessage(name + " hat auf " + plot.id() + " keine Rolle mehr.");
+        Player online = target.getPlayer();
+        if (online != null && online != sender) {
+            online.sendMessage("Deine Rolle auf Grundstück " + plot.id() + " wurde entfernt.");
+        }
+        log.info(sender.getName() + ": Rolle von " + name + " auf " + plot.id() + " in " + plot.world().getName() + " entfernt");
+        return true;
+    }
+
+    /** Setzt den Inhalt auf die Sicherung zurück, ohne Besitz, Rollen oder Homes zu ändern (Team-Befehl). */
+    public boolean reset(CommandSender sender, Plot plot) {
+        if (!resetToSnapshot(sender, plot)) {
+            return false;
+        }
+        sender.sendMessage("Grundstück " + plot.id() + " wurde zurückgesetzt.");
+        log.info(sender.getName() + " hat " + plot.id() + " in " + plot.world().getName() + " zurückgesetzt");
+        return true;
+    }
+
+    /** Speichert den aktuellen Zustand als Sicherung zum Zurücksetzen (überschreibt eine vorhandene). */
+    public boolean saveSnapshot(CommandSender sender, Plot plot) {
+        try {
+            snapshots.save(plot);
+        } catch (IOException | WorldEditException e) {
+            sender.sendMessage("Sicherung von " + plot.id() + " fehlgeschlagen, Details im Server-Log.");
+            log.log(Level.SEVERE, "Sicherung von " + plot.id() + " fehlgeschlagen", e);
+            return false;
+        }
+        sender.sendMessage("Aktueller Zustand von " + plot.id() + " ist jetzt die Sicherung zum Zurücksetzen.");
+        log.info(sender.getName() + " hat eine Sicherung von " + plot.id() + " in " + plot.world().getName() + " angelegt");
+        return true;
+    }
+
+    /** Ob es für das Grundstück eine Sicherung zum Zurücksetzen gibt. */
+    public boolean hasSnapshot(Plot plot) {
+        return snapshots.hasSnapshot(plot);
+    }
+
+    /** Alle vergebbaren Rollenschlüssel, z.B. "besitzende, mitbewohnende, bauhilfe, gast". */
+    public String roleKeys() {
+        List<String> keys = new ArrayList<>();
+        keys.add(PlotRole.OWNER_KEY);
+        keys.addAll(config.getRoles().keySet());
+        return String.join(", ", keys);
+    }
+
+    /**
+     * Löscht ein Grundstück endgültig (Region, Rollen, Homes und Sicherung); ein bezahlter Preis wird vorher erstattet.
+     *
+     * @param reset {@code true}: vorher den Inhalt auf die Sicherung zurücksetzen
+     */
+    public boolean remove(CommandSender sender, Plot plot, boolean reset) {
+        RegionManager manager = WorldGuardUtils.getRegionManager(plot.world());
+        if (manager == null) {
+            sender.sendMessage("In dieser Welt sind keine WorldGuard-Regionen verfügbar.");
+            return false;
+        }
+        if (reset && !resetToSnapshot(sender, plot)) {
+            return false;
+        }
+        refundClaim(plot);
+        homes.deleteHomesOnPlot(plot);
+        roles.deleteRolesOnPlot(plot);
+        snapshots.delete(plot);
+        manager.removeRegion(plot.id());
+        saveRegions(plot.world());
+
+        sender.sendMessage("Grundstück " + plot.id() + " wurde gelöscht.");
+        log.info(sender.getName() + " hat " + plot.id() + " in " + plot.world().getName() + " gelöscht");
+        return true;
+    }
+
+    /**
+     * Sicherer Teleportpunkt auf dem Grundstück: Mitte der Region auf dem obersten festen Block.
+     * Liegt die Mitte nicht im Grundstück (z.B. bei L-förmigen Polygonen), wird der erste Eckpunkt genommen.
+     */
+    public Location getTeleportLocation(Plot plot) {
+        ProtectedRegion region = plot.region();
+        int x = (region.getMinimumPoint().x() + region.getMaximumPoint().x()) / 2;
+        int z = (region.getMinimumPoint().z() + region.getMaximumPoint().z()) / 2;
+        if (!region.contains(x, region.getMinimumPoint().y(), z)) {
+            x = region.getPoints().getFirst().x();
+            z = region.getPoints().getFirst().z();
+        }
+        int y = plot.world().getHighestBlockYAt(x, z);
+        return new Location(plot.world(), x + 0.5, y + 1, z + 0.5);
+    }
+
+    // ---------------------------------------------------------------- intern
+
+    /** Setzt das Grundstück auf die Sicherung zurück; meldet selbst, wenn es keine gibt oder es fehlschlägt. */
+    private boolean resetToSnapshot(CommandSender sender, Plot plot) {
+        if (!snapshots.hasSnapshot(plot)) {
+            sender.sendMessage("Für " + plot.id() + " gibt es keine Sicherung zum Zurücksetzen (z.B. vor dieser Plugin-Version angelegt). "
+                    + "Es wurde nichts geändert. Ohne 'reset' bleibt der Inhalt stehen.");
+            return false;
+        }
+        try {
+            snapshots.restore(plot);
+            return true;
+        } catch (IOException | WorldEditException e) {
+            sender.sendMessage("Zurücksetzen von " + plot.id() + " fehlgeschlagen, es wurde sonst nichts geändert. Details im Server-Log.");
+            log.log(Level.SEVERE, "Zurücksetzen von " + plot.id() + " fehlgeschlagen", e);
+            return false;
+        }
+    }
+
+    private static boolean isLastOwner(Plot plot, UUID uuid) {
+        return plot.isOwner(uuid) && plot.region().getOwners().size() == 1;
+    }
+
+    private void saveClaim(Plot plot, UUID payer, long price) {
+        try (PreparedStatement statement = database.getConnection().prepareStatement(
+                "INSERT OR REPLACE INTO plot_claims (world, plot_id, payer, price, claimed_at) VALUES (?, ?, ?, ?, ?)")) {
+            statement.setString(1, plot.world().getName());
+            statement.setString(2, plot.id());
+            statement.setString(3, payer.toString());
+            statement.setLong(4, price);
+            statement.setLong(5, System.currentTimeMillis());
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new DataException("Kauf konnte nicht gespeichert werden", e);
+        }
+    }
+
+    /** Erstattet den gespeicherten Kaufpreis (falls vorhanden) und löscht den Eintrag. */
+    private void refundClaim(Plot plot) {
+        try {
+            UUID payer = null;
+            long price = 0;
+            try (PreparedStatement select = database.getConnection().prepareStatement(
+                    "SELECT payer, price FROM plot_claims WHERE world = ? AND plot_id = ?")) {
+                select.setString(1, plot.world().getName());
+                select.setString(2, plot.id());
+                try (ResultSet result = select.executeQuery()) {
+                    if (result.next()) {
+                        payer = UUID.fromString(result.getString(1));
+                        price = result.getLong(2);
+                    }
+                }
+            }
+            if (payer == null) {
+                return;
+            }
+            try (PreparedStatement delete = database.getConnection().prepareStatement(
+                    "DELETE FROM plot_claims WHERE world = ? AND plot_id = ?")) {
+                delete.setString(1, plot.world().getName());
+                delete.setString(2, plot.id());
+                delete.executeUpdate();
+            }
+            economy.deposit(payer, price);
+
+            Player online = Bukkit.getPlayer(payer);
+            if (online != null) {
+                online.sendMessage("Für Grundstück " + plot.id() + " wurden dir " + economy.format(price) + " erstattet.");
+            }
+        } catch (SQLException e) {
+            throw new DataException("Erstattung fehlgeschlagen", e);
+        }
+    }
+
+    /** Speichert die WorldGuard-Regionen sofort, damit Datenbank und Regionen bei einem Absturz zusammenpassen. */
+    private void saveRegions(World world) {
+        RegionManager manager = WorldGuardUtils.getRegionManager(world);
+        if (manager == null) {
+            return;
+        }
+        try {
+            manager.saveChanges();
+        } catch (StorageException e) {
+            log.severe("WorldGuard-Regionen in " + world.getName() + " konnten nicht gespeichert werden: " + e.getMessage());
+        }
+    }
+
+    /** Nummer aus "plot_12" → 12 (für die Sortierung); ungültige IDs ans Ende. */
+    private static int plotNumber(Plot plot) {
+        try {
+            return Integer.parseInt(plot.id().substring(CreatePlot.PLOT_PREFIX.length()));
+        } catch (NumberFormatException e) {
+            return Integer.MAX_VALUE;
+        }
+    }
+}

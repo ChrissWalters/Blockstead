@@ -1,0 +1,119 @@
+# Konfiguration von Blockstead.
+# Änderungen werden beim nächsten Serverstart übernommen.
+
+# Anzeige von LuckPerms-Präfixen/-Suffixen in Chat, Tab-Liste und über dem Kopf.
+# Nur aktiv, wenn LuckPerms (ab 5.5.85) installiert ist; sonst läuft das Plugin ohne (Warnung im Log).
+# Präfix/Suffix kommen fertig aus LuckPerms (meta-formatting), Farbcodes dort mit & (z.B. &c).
+display:
+  # false = Chat und Tab-Liste nicht anfassen (z.B. wenn später ein Chat-Plugin das übernimmt).
+  enabled: true
+  # Vorlagen mit MiniMessage-Formatierung und den Platzhaltern {prefix}, {name}, {suffix}, {message}.
+  # Die Chat-Nachricht ({message}) erscheint immer als normaler Text – Farbcodes darin wirken nicht.
+  chat-format: "{prefix}{name}{suffix}: {message}"
+  tab-format: "{prefix}{name}{suffix}"
+  # Tab-Liste nach dem höchsten Gewicht der LuckPerms-Gruppen sortieren (höchstes oben).
+  sort-tab-by-weight: true
+  # Präfix/Suffix auch über dem Kopf (Nametag) anzeigen.
+  nametag: true
+
+# Login-Nachricht: wird jeder Person beim Betreten des Servers angezeigt (nur ihr selbst).
+# Eine Zeile pro Eintrag; leere Liste = keine Nachricht.
+# Formatierung mit MiniMessage-Tags, z.B. <gold>, <bold>, <gray>…</gray>
+# (Übersicht: https://docs.papermc.io/adventure/minimessage/format).
+# Adressen mit http:// oder https:// werden automatisch anklickbar (und bleiben sichtbar).
+# Hinweis: Minecraft öffnet nur http(s)-Links. Für Teamspeak einen Einladungslink nutzen,
+# z.B. https://invite.teamspeak.com/ts.example.de – der öffnet Teamspeak.
+# Beispiel:
+#   join-info:
+#     - "<gold>Teamspeak:</gold> https://invite.teamspeak.com/ts.example.de"
+#     - "<gold>Discord:</gold> https://discord.gg/beispiel"
+join-info: []
+
+# Server-Nachricht des Teams mit /announce <Nachricht> (z.B. vor Wartungen).
+announce:
+  # Präfix im Chat (MiniMessage); wird auch als Überschrift der Einblendung verwendet.
+  prefix: "<dark_red><bold>[Server]</bold></dark_red> "
+  # Zusätzlich groß auf dem Bildschirm einblenden.
+  title: true
+  # Hinweiston abspielen.
+  sound: true
+
+backups:
+  # Beim Serverstart werden data.db und die WorldGuard-Regionsdateien nach plugins/Blockstead/backups/
+  # gesichert – bevor das Plugin etwas ändert (wichtig bei Plugin-Updates mit Datenmigration).
+  enabled: true
+  # Wie viele Sicherungen erhalten bleiben; ältere werden beim Start gelöscht.
+  keep: 10
+
+economy:
+  # Name der Server-Währung in allen Nachrichten.
+  currency-name: Coins
+  # Guthaben, mit dem jedes Konto startet (beim ersten Join). Standard: genau ein Grundstückspreis,
+  # damit alle sich ein Grundstück selbst nehmen können.
+  start-balance: 100
+
+plots:
+  # Preis für "/plot claim". Beim Freigeben ("/plot unclaim", "/plot unassign", "/plot remove")
+  # bekommt die Person, die bezahlt hat, den gezahlten Betrag zurück.
+  price: 100
+
+  # Wartezeit in Minuten zwischen zwei "/plot unclaim reset" derselben Person (0 = keine).
+  # Zurücksetzen ist für den Server aufwendig; das verhindert Missbrauch. Das Team ist ausgenommen.
+  reset-cooldown-minutes: 10
+
+  # WorldGuard-Priorität neuer Grundstücke. Muss höher sein als die Priorität von Regionen,
+  # die Grundstücke überlappen (z.B. eine Stadt), damit die Flags des Grundstücks gelten.
+  priority: 10
+
+  # WorldGuard-Flags, mit denen jedes neue Grundstück angelegt wird.
+  # Format: <Flagname>: <Wert> – wie bei "/rg flag <ID> <Flagname> <Wert>".
+  # Für Ja/Nein-Flags "allow" oder "deny" verwenden (nicht yes/no/true/false).
+  # Bereits angelegte Grundstücke werden nicht verändert.
+  #
+  # Achtung: Diese Flags gelten für ALLE, auch für Besitzende und Mitglieder. Schutz-Flags wie
+  # use, interact, chest-access oder build gehören deshalb NICHT hierher – Fremde dürfen auf einem
+  # Grundstück ohnehin nichts (WorldGuard-Mitgliedschaft), und was Mitglieder dürfen, regeln die
+  # Rollen weiter unten.
+  default-flags:
+    # Kämpfe und Explosionen
+    pvp: deny
+    tnt: deny
+    creeper-explosion: deny
+    other-explosion: deny
+    # Feuer und natürliche Ereignisse
+    fire-spread: deny
+    lava-fire: deny
+    lightning: deny
+    water-flow: allow
+    lava-flow: allow
+    # Mobs
+    enderman-grief: deny
+    mob-damage: allow
+    mob-spawning: allow
+    entity-painting-destroy: deny
+    entity-item-frame-destroy: deny
+
+# Rollen, die Besitzende auf ihrem Grundstück vergeben können ("/plot trust <Name> <Rolle>").
+# Die höchste Rolle "besitzende" ist fest eingebaut und darf alles, auch Rollen vergeben und
+# das Grundstück freigeben. Darunter beliebig viele eigene Rollen:
+#   <schlüssel>:              – wird im Befehl verwendet, nur Kleinbuchstaben/Ziffern/-/_
+#     name: <Anzeigename>
+#     rights: [<Rechte>]
+# Mögliche Rechte:
+#   build        – Bauen und Abbauen (auch Eimer, Werkzeuge wie Hacke/Axt, Knochenmehl, Schilder bearbeiten)
+#   containers   – Truhen, Fässer, Shulkerkisten, Trichter, Spender, Lesepulte usw.
+#   doors        – Türen, Falltüren, Zauntore, Knöpfe, Hebel, Druckplatten, Glocken
+#   workstations – Werkbank, Öfen, Ambosse, Verzauberungstisch, Braustand, Betten, Endertruhe usw.
+#   entities     – Tiere, Dorfbewohnende, Rüstungsständer, Rahmen (benutzen und angreifen)
+#   home         – "/plot home set" auf diesem Grundstück
+# Mitglieder ohne gespeicherte Rolle (z.B. per "/rg addmember" hinzugefügt) haben alle Rechte.
+roles:
+  mitbewohnende:
+    name: Mitbewohnende
+    rights: [build, containers, doors, workstations, entities, home]
+  bauhilfe:
+    name: Bauhilfe
+    rights: [build, doors, workstations]
+  gast:
+    name: Gast
+    rights: [doors]

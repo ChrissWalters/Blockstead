@@ -1,0 +1,83 @@
+name: Blockstead
+version: ${version}
+main: com.github.chrisswalters.blockstead.Blockstead
+description: CityBuild plots on WorldGuard/WorldEdit - claim, roles, homes, reset
+authors: [ChrissWalters]
+website: https://github.com/ChrissWalters/Blockstead
+api-version: '26.2'
+depend: [WorldEdit, WorldGuard]
+# optional: Präfixe in Chat/Tab; wird vor Blockstead geladen, falls installiert
+softdepend: [LuckPerms]
+# Befehle werden im Code registriert (Paper-Brigadier, siehe Blockstead.onEnable), hier nur die Rechte.
+permissions:
+  bs.die:
+    description: "able to use /die or /suicide"
+    default: op
+  bs.invincible:
+    description: "able to use /invincible"
+    default: op
+  bs.invincible.others:
+    description: "able to use /invincible <Player> on other players"
+    default: op
+  bs.plot:
+    description: "able to use /plot or /p (help, info, list)"
+    default: true
+  bs.plot.claim:
+    description: "able to buy a free plot with /plot claim"
+    default: true
+  bs.plot.unclaim:
+    description: "able to release an own plot with /plot unclaim"
+    default: true
+  bs.plot.home:
+    description: "able to use /plot home and /plot home set"
+    default: true
+  bs.plot.trust:
+    description: "able to give/remove roles on own plots with /plot trust and /plot untrust"
+    default: true
+  bs.plot.trust.others:
+    description: "able to use /plot trust and /plot untrust on any plot"
+    default: op
+  bs.plot.bypass:
+    description: "not restricted by plot roles (WorldGuard bypass is separate)"
+    default: op
+  bs.plot.reset:
+    description: "able to reset any plot to its snapshot with /plot reset (ownership stays)"
+    default: op
+  bs.plot.snapshot:
+    description: "able to save the current state of a plot as reset snapshot with /plot snapshot"
+    default: op
+  bs.plot.tp:
+    description: "able to teleport to any plot with /plot tp <ID> [world]"
+    default: op
+  bs.plot.list.others:
+    description: "able to use /plot list <Name>"
+    default: op
+  bs.plot.assign:
+    description: "able to assign a free plot for free with /plot assign"
+    default: op
+  bs.plot.unassign:
+    description: "able to release any plot with /plot unassign"
+    default: op
+  bs.plot.create:
+    description: "able to use /plot create"
+    default: op
+  bs.plot.remove:
+    description: "able to use /plot remove <ID>"
+    default: op
+
+
+  bs.coins:
+    description: "able to see the own balance with /coins"
+    default: true
+  bs.coins.others:
+    description: "able to see the balance of others with /coins <Name>"
+    default: op
+  bs.coins.admin:
+    description: "able to change balances with /coins give|take|set"
+    default: op
+  bs.announce:
+    description: "able to send a highlighted server message to everyone with /announce"
+    default: op
+  bs.spawn:
+    description: "able to teleport to the main world spawn with /spawn"
+    default: true

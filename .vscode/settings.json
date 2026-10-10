@@ -1,0 +1,6 @@
+{
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.import.gradle.wrapper.enabled": true,
+  "files.encoding": "utf8",
+  "java.compile.nullAnalysis.mode": "automatic"
+}

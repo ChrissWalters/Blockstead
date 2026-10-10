@@ -1,0 +1,6 @@
+# Der "Sponsor"-Knopf auf der Repository-Seite.
+#
+# Nichts an der Software hängt davon ab: Blockstead ist AGPL-3.0, vollständig und ohne Bezahlfunktionen.
+
+# Nur der Name – GitHub baut den Link selbst. Eine volle URL ergibt einen kaputten Knopf.
+ko_fi: chrisswalters

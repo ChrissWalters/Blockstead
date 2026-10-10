@@ -1,0 +1,60 @@
+plugins {
+    id 'java'
+    id 'xyz.jpenilla.run-paper' version '3.1.0'
+}
+
+group = 'com.github.chrisswalters'
+version = '1.0.0'
+
+// Paper version the plugin is compiled against and that `./gradlew runServer` starts
+def mcVersion = '26.2'
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'papermc'
+        url = 'https://repo.papermc.io/repository/maven-public/'
+    }
+    maven {
+        name = 'enginehub'
+        url = 'https://maven.enginehub.org/repo/'
+    }
+}
+
+dependencies {
+    // All provided by the server at runtime -> compileOnly, nothing gets bundled into the jar
+    compileOnly 'io.papermc.paper:paper-api:26.2.build.133-stable'
+    compileOnly 'com.sk89q.worldedit:worldedit-bukkit:7.4.5' // tested with 7.4.6-beta-02, which is not published to Maven
+    compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.19'
+    compileOnly 'net.luckperms:api:5.5'
+}
+
+def targetJavaVersion = 25
+java {
+    // Gradle uses an installed JDK 25 or downloads one; also used by runServer
+    toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+processResources {
+    def props = [version: version]
+    inputs.properties props
+    filteringCharset = 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand props
+    }
+}
+
+// Local test server: `./gradlew runServer` (server files live in ./run)
+tasks.named('runServer') {
+    minecraftVersion(mcVersion)
+    downloadPlugins {
+        // version number is shared with the Fabric build on Modrinth, so use the Bukkit jar directly
+        url('https://cdn.modrinth.com/data/1u6JkXh5/versions/J1eeOh6C/worldedit-bukkit-7.4.6-beta-02.jar')
+        modrinth('worldguard', '7.0.19')
+        url('https://download.luckperms.net/1674/bukkit/loader/LuckPerms-Bukkit-5.5.87.jar')
+    }
+}
