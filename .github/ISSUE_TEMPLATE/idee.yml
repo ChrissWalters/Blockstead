@@ -1,0 +1,16 @@
+name: Idee oder Wunsch
+description: Ein Vorschlag für eine neue Funktion oder eine Verbesserung.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idee
+    attributes:
+      label: Was wünschst du dir?
+      description: Beschreibe die Idee und wofür sie auf eurem Server gut wäre.
+    validations:
+      required: true
+  - type: textarea
+    id: heute
+    attributes:
+      label: Wie löst ihr das bisher?
+      description: Optional – Umwege oder andere Plugins, die ihr dafür nutzt.

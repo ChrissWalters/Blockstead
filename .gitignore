@@ -1,6 +1,9 @@
 # Lokale Hinweise für Claude Code (persönlich, nicht öffentlich)
 CLAUDE.md
 
+# Lokale Arbeitsnotizen, Anleitungen usw. (nicht öffentlich)
+tmp/
+
 # Gradle
 .gradle/
 build/

@@ -1,0 +1,46 @@
+name: Fehler melden
+description: Etwas funktioniert nicht wie erwartet.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke fürs Melden! Sicherheitslücken bitte **nicht** hier, sondern vertraulich wie in
+        [SECURITY.md](https://github.com/ChrissWalters/Blockstead/blob/main/SECURITY.md) beschrieben.
+  - type: textarea
+    id: was
+    attributes:
+      label: Was ist passiert?
+      description: Was hast du gemacht, was ist passiert, was hättest du erwartet?
+      placeholder: |
+        1. /plot claim auf plot_3
+        2. Meldung „…“
+        Erwartet: …
+    validations:
+      required: true
+  - type: input
+    id: blockstead
+    attributes:
+      label: Blockstead-Version
+      description: "Zeigt /blockstead an, z.B. 1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: server
+    attributes:
+      label: Paper-, WorldEdit- und WorldGuard-Version
+      description: "Paper: /version · WorldEdit: /we version · WorldGuard: /wg version"
+      placeholder: "Paper 26.2-133, WorldEdit 7.4.6, WorldGuard 7.0.19"
+    validations:
+      required: true
+  - type: input
+    id: luckperms
+    attributes:
+      label: LuckPerms-Version (falls installiert)
+      placeholder: "5.5.87 oder „nicht installiert“"
+  - type: textarea
+    id: log
+    attributes:
+      label: Ausschnitt aus dem Server-Log
+      description: Fehlermeldungen und Zeilen mit [Blockstead] rund um das Problem. Bitte keine Passwörter oder IP-Adressen.
+      render: text
