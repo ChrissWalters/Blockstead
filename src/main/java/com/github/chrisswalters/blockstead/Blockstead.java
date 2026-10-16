@@ -1,12 +1,8 @@
 package com.github.chrisswalters.blockstead;
 
 import com.github.chrisswalters.blockstead.commands.AnnounceCommand;
-import com.github.chrisswalters.blockstead.commands.CoinsCommand;
-import com.github.chrisswalters.blockstead.commands.DieCommand;
 import com.github.chrisswalters.blockstead.commands.InfoCommand;
-import com.github.chrisswalters.blockstead.commands.InvincibleCommand;
 import com.github.chrisswalters.blockstead.commands.PlotCommand;
-import com.github.chrisswalters.blockstead.commands.SpawnCommand;
 import com.github.chrisswalters.blockstead.config.PluginConfig;
 import com.github.chrisswalters.blockstead.display.DisplayService;
 import com.github.chrisswalters.blockstead.display.DisplaySetup;
@@ -134,12 +130,9 @@ public final class Blockstead extends JavaPlugin {
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             Commands commands = event.registrar();
             commands.register(PlotCommand.build(), "Grundstücks-Befehle", List.of("p"));
-            commands.register(DieCommand.build(), "Sich selbst töten", List.of("suicide"));
-            commands.register(InvincibleCommand.build(), "Unverwundbarkeit umschalten");
-            commands.register(CoinsCommand.build(), "Guthaben der Server-Währung");
-            commands.register(SpawnCommand.build(), "Zum Spawn teleportieren");
             commands.register(InfoCommand.build(), "Version, Lizenz und Quellcode von Blockstead");
-            commands.register(AnnounceCommand.build("announce"), "Server-Nachricht des Teams an alle", List.of("broadcast"));
+            // Ohne Alias /broadcast – den belegt EssentialsX
+            commands.register(AnnounceCommand.build("announce"), "Server-Nachricht des Teams an alle");
         });
 
         // LuckPerms ist optional: nur dann die Klassen aus dem Paket display laden

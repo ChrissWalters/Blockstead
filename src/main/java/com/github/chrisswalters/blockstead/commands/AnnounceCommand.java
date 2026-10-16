@@ -16,7 +16,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 /**
- * Befehl {@code /announce <Nachricht>} (Alias {@code /broadcast}): auffällige Server-Nachricht des Teams
+ * Befehl {@code /announce <Nachricht>}: auffällige Server-Nachricht des Teams
  * an alle, z.B. vor einer Wartung. Recht: {@code bs.announce} (Standard: Op und Konsole).
  *
  * <p>Im Chat mit Präfix aus der config.yml ({@code announce.prefix}), optional zusätzlich als

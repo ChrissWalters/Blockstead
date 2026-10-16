@@ -10,15 +10,6 @@ depend: [WorldEdit, WorldGuard]
 softdepend: [LuckPerms]
 # Befehle werden im Code registriert (Paper-Brigadier, siehe Blockstead.onEnable), hier nur die Rechte.
 permissions:
-  bs.die:
-    description: "able to use /die or /suicide"
-    default: op
-  bs.invincible:
-    description: "able to use /invincible"
-    default: op
-  bs.invincible.others:
-    description: "able to use /invincible <Player> on other players"
-    default: op
   bs.plot:
     description: "able to use /plot or /p (help, info, list)"
     default: true
@@ -66,18 +57,6 @@ permissions:
     default: op
 
 
-  bs.coins:
-    description: "able to see the own balance with /coins"
-    default: true
-  bs.coins.others:
-    description: "able to see the balance of others with /coins <Name>"
-    default: op
-  bs.coins.admin:
-    description: "able to change balances with /coins give|take|set"
-    default: op
   bs.announce:
     description: "able to send a highlighted server message to everyone with /announce"
     default: op
-  bs.spawn:
-    description: "able to teleport to the main world spawn with /spawn"
-    default: true
