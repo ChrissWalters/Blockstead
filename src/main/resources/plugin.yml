@@ -6,8 +6,9 @@ authors: [ChrissWalters]
 website: https://github.com/ChrissWalters/Blockstead
 api-version: '26.3'
 depend: [WorldEdit, WorldGuard]
-# optional: Präfixe in Chat/Tab; wird vor Blockstead geladen, falls installiert
-softdepend: [LuckPerms]
+# optional, werden vor Blockstead geladen, falls installiert:
+#   LuckPerms – Präfixe in Chat/Tab-Liste/Nametag; Vault – Server-Währung (z.B. EssentialsX) zum Kaufen
+softdepend: [LuckPerms, Vault]
 # Befehle werden im Code registriert (Paper-Brigadier, siehe Blockstead.onEnable), hier nur die Rechte.
 permissions:
   bs.plot:

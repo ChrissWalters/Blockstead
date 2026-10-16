@@ -2,6 +2,7 @@ package com.github.chrisswalters.blockstead.plots;
 
 import com.github.chrisswalters.blockstead.config.PluginConfig;
 import com.github.chrisswalters.blockstead.economy.EconomyService;
+import com.github.chrisswalters.blockstead.economy.Transaction;
 import com.github.chrisswalters.blockstead.roles.PlotRight;
 import com.github.chrisswalters.blockstead.roles.PlotRole;
 import com.github.chrisswalters.blockstead.roles.RoleService;
@@ -141,26 +142,49 @@ public class PlotService {
 
     // ---------------------------------------------------------------- Ändern
 
-    /** Kauft ein freies Grundstück zum Preis aus der config.yml. */
+    /**
+     * Kauft ein freies Grundstück zum Preis aus der config.yml ({@code plots.price}) über das Economy-Plugin.
+     * Reihenfolge: Economy-Plugin erreichbar? → genug Guthaben? → abbuchen → erst dann Besitz vergeben.
+     * Bei Preis 0 geht der Kauf auch ohne Economy-Plugin.
+     */
     public boolean claim(Player player, Plot plot) {
         if (!plot.isFree()) {
             player.sendMessage("Grundstück " + plot.id() + " ist bereits vergeben.");
             return false;
         }
         long price = config.getPlotPrice();
-        if (!economy.withdraw(player.getUniqueId(), price)) {
-            player.sendMessage("Du hast nicht genug Guthaben: " + plot.id() + " kostet " + economy.format(price)
-                    + ", du hast " + economy.format(economy.getBalance(player.getUniqueId())) + ".");
-            return false;
-        }
         if (price > 0) {
-            saveClaim(plot, player.getUniqueId(), price);
+            if (!economy.isAvailable()) {
+                player.sendMessage("Grundstücke können gerade nicht gekauft werden, weil die Server-Währung nicht erreichbar ist. "
+                        + "Bitte gib dem Server-Team Bescheid.");
+                log.warning("/plot claim von " + player.getName() + " abgelehnt: kein Economy-Plugin über Vault erreichbar");
+                return false;
+            }
+            if (!economy.has(player, price)) {
+                player.sendMessage("Du hast nicht genug Guthaben: " + plot.id() + " kostet " + economy.format(price)
+                        + ", du hast " + economy.format(economy.getBalance(player)) + ".");
+                return false;
+            }
+            Transaction payment = economy.withdraw(player, price);
+            if (!payment.success()) {
+                player.sendMessage("Die Abbuchung hat nicht geklappt: " + payment.error() + ". Es wurde nichts abgebucht.");
+                log.warning("Abbuchung für " + plot.id() + " von " + player.getName() + " fehlgeschlagen: " + payment.error());
+                return false;
+            }
+            try {
+                saveClaim(plot, player.getUniqueId(), price);
+            } catch (DataException e) {
+                // Ohne gespeicherten Kauf gäbe es später keine Erstattung – Betrag sofort zurückbuchen
+                economy.deposit(player, price);
+                throw e;
+            }
         }
         plot.region().getOwners().addPlayer(player.getUniqueId());
         saveRegions(plot.world());
 
-        player.sendMessage("Grundstück " + plot.id() + " gehört jetzt dir. Bezahlt: " + economy.format(price)
-                + ", Guthaben: " + economy.format(economy.getBalance(player.getUniqueId())) + ".");
+        player.sendMessage("Grundstück " + plot.id() + " gehört jetzt dir. "
+                + (price > 0 ? "Bezahlt: " + economy.format(price) + ", Guthaben: " + economy.format(economy.getBalance(player)) + "."
+                             : "Es hat nichts gekostet."));
         log.info(player.getName() + " hat " + plot.id() + " in " + plot.world().getName() + " für " + price + " gekauft");
         return true;
     }
@@ -403,7 +427,11 @@ public class PlotService {
         }
     }
 
-    /** Erstattet den gespeicherten Kaufpreis (falls vorhanden) und löscht den Eintrag. */
+    /**
+     * Erstattet den gespeicherten Kaufpreis (falls vorhanden) an die Person, die bezahlt hat, und löscht den Eintrag.
+     * Schlägt die Buchung fehl (z.B. Economy-Plugin fehlt), wird das Grundstück trotzdem freigegeben; im Log steht
+     * dann ein Fehler mit allen Angaben für eine Erstattung von Hand.
+     */
     private void refundClaim(Plot plot) {
         try {
             UUID payer = null;
@@ -428,11 +456,21 @@ public class PlotService {
                 delete.setString(2, plot.id());
                 delete.executeUpdate();
             }
-            economy.deposit(payer, price);
-
+            OfflinePlayer payerPlayer = Bukkit.getOfflinePlayer(payer);
+            Transaction refund = economy.deposit(payerPlayer, price);
             Player online = Bukkit.getPlayer(payer);
+            if (refund.success()) {
+                if (online != null) {
+                    online.sendMessage("Für Grundstück " + plot.id() + " wurden dir " + economy.format(price) + " erstattet.");
+                }
+                return;
+            }
+            String name = PlayerLookup.nameOf(payer);
+            log.severe("Erstattung fehlgeschlagen: " + plot.id() + " in " + plot.world().getName() + ", " + name + " (" + payer
+                    + "), Betrag " + price + " – " + refund.error() + ". Bitte von Hand erstatten, z.B. /eco give " + name + " " + price);
             if (online != null) {
-                online.sendMessage("Für Grundstück " + plot.id() + " wurden dir " + economy.format(price) + " erstattet.");
+                online.sendMessage("Die Erstattung für Grundstück " + plot.id() + " (" + economy.format(price)
+                        + ") konnte gerade nicht gebucht werden. Das Server-Team kümmert sich darum.");
             }
         } catch (SQLException e) {
             throw new DataException("Erstattung fehlgeschlagen", e);

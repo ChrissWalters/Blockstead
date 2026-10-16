@@ -108,7 +108,7 @@ public final class Blockstead extends JavaPlugin {
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
-        economy = new EconomyService(database, pluginConfig);
+        economy = new EconomyService();
         homes = new HomeService(database);
         plotService = new PlotService(database, economy, homes, new RoleService(database, pluginConfig),
                 new SnapshotService(getDataFolder()), pluginConfig, getLogger());
@@ -146,6 +146,10 @@ public final class Blockstead extends JavaPlugin {
         for (Player player : getServer().getOnlinePlayers()) {
             PlayerUtility.initBSPlayer(player);
         }
+
+        // Erst im ersten Tick, wenn alle Plugins aktiv sind: Economy-Plugins wie EssentialsX melden sich bei
+        // Vault schon beim Laden an, sind aber erst nach ihrem eigenen onEnable benutzbar
+        getServer().getScheduler().runTask(this, () -> economy.logStatus(getLogger()));
     }
 
     @Override

@@ -1,113 +1,107 @@
 package com.github.chrisswalters.blockstead.economy;
 
-import com.github.chrisswalters.blockstead.config.PluginConfig;
-import com.github.chrisswalters.blockstead.storage.DataException;
-import com.github.chrisswalters.blockstead.storage.Database;
+import org.bukkit.OfflinePlayer;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.UUID;
+import java.util.logging.Logger;
 
 /**
- * Kontostände der Server-Währung (Name und Startguthaben aus der config.yml).
+ * Zugriff auf die Server-Währung über Vault – die eigentliche Kontoführung macht ein Economy-Plugin
+ * wie EssentialsX. Blockstead führt seit 2.0.0 keine eigenen Kontostände mehr.
  *
- * <p>Ein Konto wird beim ersten Zugriff automatisch mit dem Startguthaben angelegt
- * ({@link #ensureAccount(UUID)}), z.B. beim ersten Join nach Installation des Plugins.
- * Beträge sind ganze Zahlen und nie negativ.
+ * <p>Vault ist optional. Ohne Vault oder ohne aktives Economy-Plugin ist {@link #isAvailable()} {@code false}:
+ * Lesezugriffe liefern dann 0, Buchungen schlagen mit einer Fehlermeldung fehl. Diese Klasse selbst enthält
+ * keine Vault-Typen, die stecken nur in {@link VaultEconomy}.
+ *
+ * <p>Beträge sind bei Blockstead ganze Zahlen ({@code long}); Vault rechnet mit {@code double}.
  */
 public class EconomyService {
 
-    private final Database database;
-    private final PluginConfig config;
+    private static final String VAULT_ECONOMY_CLASS = "net.milkbowl.vault.economy.Economy";
 
-    public EconomyService(Database database, PluginConfig config) {
-        this.database = database;
-        this.config = config;
+    private final boolean vaultPresent;
+
+    public EconomyService() {
+        this.vaultPresent = isVaultPresent();
     }
 
-    /** Legt das Konto mit dem Startguthaben an, falls es noch nicht existiert. */
-    public void ensureAccount(UUID uuid) {
-        try (PreparedStatement statement = connection().prepareStatement(
-                "INSERT OR IGNORE INTO accounts (uuid, balance) VALUES (?, ?)")) {
-            statement.setString(1, uuid.toString());
-            statement.setLong(2, config.getStartBalance());
-            statement.executeUpdate();
-        } catch (SQLException e) {
-            throw new DataException("Konto konnte nicht angelegt werden", e);
+    private static boolean isVaultPresent() {
+        try {
+            Class.forName(VAULT_ECONOMY_CLASS);
+            return true;
+        } catch (ClassNotFoundException | LinkageError e) {
+            return false;
         }
     }
 
-    /** Kontostand; legt das Konto mit Startguthaben an, falls es noch keins gibt. */
-    public long getBalance(UUID uuid) {
-        ensureAccount(uuid);
-        try (PreparedStatement statement = connection().prepareStatement(
-                "SELECT balance FROM accounts WHERE uuid = ?")) {
-            statement.setString(1, uuid.toString());
-            try (ResultSet result = statement.executeQuery()) {
-                return result.next() ? result.getLong(1) : 0;
+    /** Ob Vault installiert ist und ein aktives Economy-Plugin angemeldet hat. */
+    public boolean isAvailable() {
+        return vaultPresent && VaultEconomy.isAvailable();
+    }
+
+    /** Kontostand; 0, wenn kein Economy-Plugin erreichbar ist. */
+    public double getBalance(OfflinePlayer player) {
+        if (!isAvailable()) {
+            return 0;
+        }
+        try {
+            return VaultEconomy.getBalance(player);
+        } catch (RuntimeException e) {
+            return 0;
+        }
+    }
+
+    /** Ob die Person mindestens {@code amount} hat; {@code false} ohne Economy-Plugin. */
+    public boolean has(OfflinePlayer player, long amount) {
+        if (!isAvailable()) {
+            return false;
+        }
+        try {
+            return VaultEconomy.has(player, amount);
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    /** Bucht {@code amount} ab. */
+    public Transaction withdraw(OfflinePlayer player, long amount) {
+        return isAvailable() ? VaultEconomy.withdraw(player, amount) : unavailable();
+    }
+
+    /** Bucht {@code amount} ein; legt bei Bedarf ein Konto an. */
+    public Transaction deposit(OfflinePlayer player, long amount) {
+        return isAvailable() ? VaultEconomy.deposit(player, amount) : unavailable();
+    }
+
+    /** Setzt den Kontostand (nur für die einmalige Übertragung alter Kontostände aus Blockstead 1.x). */
+    Transaction setBalance(OfflinePlayer player, long amount) {
+        return isAvailable() ? VaultEconomy.setBalance(player, amount) : unavailable();
+    }
+
+    /** Betrag im Format des Economy-Plugins (z.B. "$1,000"); ohne Economy-Plugin nur die Zahl. */
+    public String format(double amount) {
+        if (isAvailable()) {
+            try {
+                return VaultEconomy.format(amount);
+            } catch (RuntimeException e) {
+                // weiter unten ohne Format
             }
-        } catch (SQLException e) {
-            throw new DataException("Kontostand konnte nicht gelesen werden", e);
+        }
+        return amount == Math.rint(amount) ? String.valueOf((long) amount) : String.valueOf(amount);
+    }
+
+    /** Eine Log-Zeile, über welches Economy-Plugin die Währung läuft – oder eine Warnung, wenn keins da ist. */
+    public void logStatus(Logger log) {
+        if (!vaultPresent) {
+            log.warning("Vault ist nicht installiert – Grundstücke können nicht gekauft werden (Zuweisen durch das Team geht).");
+        } else if (!VaultEconomy.isAvailable()) {
+            log.warning("Vault ist installiert, aber kein Economy-Plugin (z.B. EssentialsX) ist aktiv – "
+                    + "Grundstücke können nicht gekauft werden (Zuweisen durch das Team geht).");
+        } else {
+            log.info("Server-Währung über Vault: " + VaultEconomy.providerName());
         }
     }
 
-    /** Zahlt {@code amount} ein (darf nicht negativ sein). */
-    public void deposit(UUID uuid, long amount) {
-        requireNotNegative(amount);
-        ensureAccount(uuid);
-        update("UPDATE accounts SET balance = balance + ? WHERE uuid = ?", amount, uuid);
-    }
-
-    /**
-     * Bucht {@code amount} ab, aber nur, wenn genug Guthaben da ist.
-     *
-     * @return {@code false}, wenn das Guthaben nicht reicht (dann wird nichts abgebucht)
-     */
-    public boolean withdraw(UUID uuid, long amount) {
-        requireNotNegative(amount);
-        ensureAccount(uuid);
-        try (PreparedStatement statement = connection().prepareStatement(
-                "UPDATE accounts SET balance = balance - ? WHERE uuid = ? AND balance >= ?")) {
-            statement.setLong(1, amount);
-            statement.setString(2, uuid.toString());
-            statement.setLong(3, amount);
-            return statement.executeUpdate() == 1;
-        } catch (SQLException e) {
-            throw new DataException("Abbuchung fehlgeschlagen", e);
-        }
-    }
-
-    /** Setzt den Kontostand auf {@code amount} (darf nicht negativ sein). */
-    public void setBalance(UUID uuid, long amount) {
-        requireNotNegative(amount);
-        ensureAccount(uuid);
-        update("UPDATE accounts SET balance = ? WHERE uuid = ?", amount, uuid);
-    }
-
-    /** Betrag mit Währungsname, z.B. "100 Coins". */
-    public String format(long amount) {
-        return amount + " " + config.getCurrencyName();
-    }
-
-    private void update(String sql, long amount, UUID uuid) {
-        try (PreparedStatement statement = connection().prepareStatement(sql)) {
-            statement.setLong(1, amount);
-            statement.setString(2, uuid.toString());
-            statement.executeUpdate();
-        } catch (SQLException e) {
-            throw new DataException("Kontostand konnte nicht geändert werden", e);
-        }
-    }
-
-    private static void requireNotNegative(long amount) {
-        if (amount < 0) {
-            throw new IllegalArgumentException("Betrag darf nicht negativ sein: " + amount);
-        }
-    }
-
-    private Connection connection() {
-        return database.getConnection();
+    private static Transaction unavailable() {
+        return Transaction.failed("kein Economy-Plugin über Vault erreichbar");
     }
 }
