@@ -11,8 +11,9 @@ Was sich zwischen den Versionen geändert hat: [CHANGELOG.md](CHANGELOG.md).
 ## So funktioniert's
 
 Das Server-Team legt Grundstücke an – vom tiefsten bis zum höchsten Punkt der Welt. Freie Grundstücke
-kannst du mit der Server-Währung kaufen; zum Start hast du genug Coins für **ein Grundstück**. Weitere
-Grundstücke vergibt das Team.
+kannst du mit der Server-Währung kaufen; zum Start hast du in der Regel genug Guthaben für **ein
+Grundstück**. Dein Guthaben zeigt der Befehl deines Servers, meist `/balance`. Weitere Grundstücke vergibt
+das Team.
 
 Auf deinem Grundstück darf niemand etwas anfassen, dem du keine Rolle gegeben hast – auch keine Türen
 öffnen. Beim Betreten und Verlassen eines Grundstücks siehst du, wo du bist.
@@ -34,8 +35,6 @@ aus: `plot_3`. Alle Befehle haben Tab-Vervollständigung.
 | `/plot untrust <Name> [ID]` | Rolle wieder wegnehmen |
 | `/plot unclaim [ID]` | Grundstück zurückgeben – du bekommst den Kaufpreis zurück, alles Gebaute bleibt stehen |
 | `/plot unclaim [ID] reset` | Zurückgeben **und** auf den Ursprungszustand zurücksetzen (mit Sicherheitsabfrage) |
-| `/coins` | Dein Guthaben |
-| `/spawn` | Zum Spawn – auch ein Ausweg, falls du irgendwo festsitzt |
 | `/blockstead` | Version, Lizenz und Quellcode des Plugins |
 
 Was davon du nutzen darfst, legt der Server fest – Befehle ohne Berechtigung werden dir gar nicht erst

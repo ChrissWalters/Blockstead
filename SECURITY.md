@@ -1,6 +1,7 @@
 # Sicherheitsrichtlinie
 
-Blockstead läuft auf Minecraft-Servern und verwaltet Grundstücke, Rechte und eine Server-Währung. Fehler
+Blockstead läuft auf Minecraft-Servern und verwaltet Grundstücke und Rechte und bucht Käufe über die
+Server-Währung. Fehler
 dort können Bauwerke ungeschützt lassen oder Spielenden Rechte geben, die sie nicht haben sollten.
 
 ## Eine Schwachstelle melden
@@ -20,7 +21,7 @@ Es gibt kein Bounty-Programm; dies ist ein freiwilliges Projekt unter der AGPL-3
 
 ## Was dazugehört
 
-Das Plugin selbst: Schutz der Grundstücke und Rollen, Rechteprüfung der Befehle, die Server-Währung,
+Das Plugin selbst: Schutz der Grundstücke und Rollen, Rechteprüfung der Befehle, Buchungen beim Kaufen und Erstatten,
 Datenbank und Sicherungen, die Verarbeitung von Chat- und Konfigurationstexten.
 
 Nicht dazu gehören: Probleme, die einen bereits kompromittierten Server voraussetzen, Fehler in Paper,
@@ -34,7 +35,8 @@ vergeben hat.
 | Grundstücke | WorldGuard sperrt Fremde aus; Rollen schränken Mitglieder zusätzlich ein, nie umgekehrt |
 | Befehle | Jeder Unterbefehl prüft sein Recht; ohne Recht wird er gar nicht angezeigt |
 | Chat | Nachrichten von Spielenden werden nie als Formatierung gelesen (keine Farb-, Klick- oder Hover-Codes) |
-| Datenbank | Ausschließlich vorbereitete SQL-Statements; Abbuchungen atomar, Beträge nie negativ |
+| Datenbank | Ausschließlich vorbereitete SQL-Statements |
+| Währung | Abbuchung vor der Vergabe des Grundstücks; Buchungen über das Economy-Plugin, fehlgeschlagene Erstattungen im Log |
 | Dateien | Namen von Sicherungsdateien werden auf sichere Zeichen reduziert |
 | Serverlast | Wartezeit zwischen zwei Zurücksetzungen durch Spielende |
 | Updates | Sicherung von Datenbank und Regionen bei jedem Start; kein Start mit einer neueren Datenbank |

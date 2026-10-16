@@ -5,7 +5,7 @@ Offene Punkte, Erkenntnisse und Grundsatzentscheidungen aus der Entwicklung. Erg
 
 ## Offene Punkte
 
-* **v1.1.0: Sprachauswahl Deutsch/Englisch.** Alle Texte für Spielende und Team (Nachrichten, Hilfe,
+* **v2.1.0: Sprachauswahl Deutsch/Englisch.** Alle Texte für Spielende und Team (Nachrichten, Hilfe,
   Kommentare der `config.yml`, Doku) sollen auf Deutsch oder Englisch verfügbar sein. Heute stehen die
   deutschen Texte direkt in den Befehls- und Service-Klassen; sie müssen in Sprachdateien wandern (z.B.
   `lang/de.yml`, `lang/en.yml`). Zu klären: Sprache pro Server (config.yml) oder pro Person (Sprache des
@@ -53,6 +53,22 @@ Offene Punkte, Erkenntnisse und Grundsatzentscheidungen aus der Entwicklung. Erg
   „Unknown command“.
 * Die Meldung `HorriblePlayerLoginEventHack` kommt von LuckPerms/WorldGuard und ist harmlos.
 
+**Economy (Vault/EssentialsX)**
+* EssentialsX meldet seinen Vault-Provider schon in `onLoad()` an, benutzbar ist er aber erst nach seinem
+  `onEnable()`. Darum laufen Status-Prüfung und Übertragung der alten Kontostände im ersten Tick nach dem
+  Start, und `isAvailable()` prüft zusätzlich `isEnabled()` des Providers. Den Provider bei jedem Zugriff neu
+  holen, nicht zwischenspeichern.
+* Vault kennt kein „Kontostand setzen“ – dafür die Differenz ein- bzw. abbuchen.
+* Vault rechnet mit `double`, Blockstead mit ganzen Zahlen; `getBalance` kann Nachkommastellen liefern.
+* Für Personen, die offline sind, gibt es im Economy-Plugin evtl. noch kein Konto: vor dem Einbuchen
+  `hasAccount`/`createPlayerAccount`.
+* EssentialsX `currency-symbol` erlaubt nur **ein** Zeichen; längere Werte (z.B. „Coins“) werden still zu `$`.
+* EssentialsX unterstützt Paper 26.3 erst ab dem Dev-Build 2.22.1-SNAPSHOT; das Release 2.22.0 endet bei
+  26.1.2.
+* Die VaultAPI gibt es nur über JitPack; ohne `transitive = false` zieht sie eine alte Bukkit-API mit.
+* `Player#setInvulnerable` (der frühere Befehl `/invincible`) wird in den Spieldaten gespeichert und bleibt
+  bestehen, auch wenn das Plugin, das ihn gesetzt hat, weg ist.
+
 **Abhängigkeiten**
 * WorldEdit-Betaversionen gibt es nicht im Maven-Repository – dann gegen die letzte Release-Version kompilieren. Auf Modrinth
   teilt sich die Versionsnummer mit dem Fabric-Build, darum lädt `runServer` die Bukkit-Jar per URL.
@@ -71,7 +87,13 @@ Offene Punkte, Erkenntnisse und Grundsatzentscheidungen aus der Entwicklung. Erg
   hält Fremde fern, Blockstead verbietet Mitgliedern zusätzlich, was ihre Rolle nicht darf. Etwas zu
   erlauben, das WorldGuard verboten hat, wäre fehleranfällig.
 * **WorldGuard ist die Quelle für Besitz und Mitgliedschaft;** die Datenbank speichert nur, was WorldGuard
-  nicht kennt (Kontostände, Käufe, Rollen, Zuhause).
+  nicht kennt (Käufe für die Erstattung, Rollen, Zuhause). Kontostände führt seit 2.0.0 das Economy-Plugin.
 * **Eine Sicherung pro Grundstück** zum Zurücksetzen, angelegt beim Anlegen; ältere Stände gibt es nicht.
+* **Keine Allgemein-Befehle, keine eigene Währung** (seit 2.0.0): Blockstead kümmert sich um Grundstücke.
+  `/spawn`, `/god`, `/suicide`, Kontostände usw. kommen von EssentialsX bzw. einem Economy-Plugin über
+  Vault. Ausnahme: `/announce` (Team-Nachricht mit Einblendung), die Login-Nachricht und die
+  LuckPerms-Präfixe.
+* **Versionierung nach Semantic Versioning 2.0.0** (semver.org) – was als Major zählt, steht in
+  [development.md](development.md#versionierung).
 * **Rechte-Präfix `bs.*`** (**B**lock**s**tead) – unverändert seit dem Vorgänger „Buildserver“.
 * **Lizenz AGPL-3.0-or-later;** Issues willkommen, Pull Requests werden nicht angenommen.

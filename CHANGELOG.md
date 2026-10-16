@@ -1,5 +1,46 @@
 # Änderungen
 
+## 2.0.0
+
+Blockstead konzentriert sich auf Grundstücke. Allgemeine Befehle und die Währung übernimmt EssentialsX (bzw.
+ein anderes Economy-Plugin), angebunden über Vault.
+
+### Entfernt
+- `/coins` (inkl. `give|take|set`) und die eigene Kontoführung – Ersatz: `/balance`, `/pay`, `/eco`, `/baltop`
+  des Economy-Plugins.
+- `/spawn` – Ersatz: `/spawn` und `/setspawn` von EssentialsXSpawn.
+- `/die` und `/suicide` – Ersatz: `/suicide` von EssentialsX.
+- `/invincible` – Ersatz: `/god` von EssentialsX.
+- Alias `/broadcast` für `/announce` (Konflikt mit EssentialsX); `/announce` selbst bleibt.
+- Rechte `bs.coins`, `bs.coins.others`, `bs.coins.admin`, `bs.spawn`, `bs.die`, `bs.invincible`,
+  `bs.invincible.others`.
+- `config.yml`: `economy.currency-name` und `economy.start-balance` (werden ignoriert; Name, Zeichen und
+  Startguthaben stellt man im Economy-Plugin ein).
+
+### Geändert
+- `/plot claim` bucht über Vault beim Economy-Plugin ab; ohne Vault bzw. Economy-Plugin ist Kaufen gesperrt
+  (außer bei Preis 0), `/plot assign` geht weiter.
+- Erstattungen beim Freigeben und Löschen laufen über das Economy-Plugin. Schlägt eine Erstattung fehl, wird
+  das Grundstück trotzdem freigegeben und der Betrag mit Name im Log gemeldet.
+- Beträge erscheinen im Format des Economy-Plugins.
+- Vault ist eine optionale Abhängigkeit (`softdepend`), wie LuckPerms.
+
+### Neu
+- Einmalige Übertragung der Kontostände aus 1.x in das Economy-Plugin (gesetzt, nicht addiert), mit Log je
+  Konto; abschaltbar mit `economy.import-old-balances: false`.
+- Log-Zeile zum Status der Server-Währung kurz nach dem Start.
+
+### Hinweise zum Update von 1.x
+- **Vorher ein komplettes Server-Backup machen.**
+- **`/invincible` vorher bei allen ausschalten**, die es benutzt haben (mit 1.0.1). Die Unverwundbarkeit steht
+  in den Spieldaten und lässt sich danach ohne den Befehl nicht mehr abschalten.
+- Vault (oder VaultUnlocked) und ein Economy-Plugin installieren, z.B. EssentialsX – für Paper 26.3 derzeit
+  der Dev-Build 2.22.1-SNAPSHOT. Ohne beides können Grundstücke nicht gekauft werden.
+- Rechte für die Ersatzbefehle im Rechte-Plugin vergeben (`essentials.balance`, `essentials.spawn`, …).
+- Datenbank-Schema 4: Zurück auf 1.x geht nur über die Sicherung von `data.db` vor dem Update; 1.x startet mit
+  Schema 4 absichtlich nicht.
+- Details: `docs/admin.md`, Abschnitt „Von 1.x auf 2.0.0“.
+
 ## 1.0.1
 
 - `/plot create` lehnt eine Auswahl ab, die ein bestehendes Grundstück überlappt, und warnt, wenn eine andere

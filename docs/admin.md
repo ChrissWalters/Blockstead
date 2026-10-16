@@ -12,6 +12,16 @@ Diese Seite ist für Serverbetreibende und das Server-Team. Was Spielende wissen
 | WorldEdit | 7.4.x (getestet mit 7.4.6) |
 | WorldGuard | 7.0.19 |
 | LuckPerms (optional) | 5.5.85 oder neuer – für Präfixe in Chat, Tab-Liste und über dem Kopf |
+| Vault oder VaultUnlocked (optional) | Vault 1.7.3 – nötig, damit Grundstücke **gekauft** werden können |
+| Economy-Plugin (optional) | z.B. EssentialsX – führt die Kontostände; für Paper 26.3 derzeit nur als Dev-Build (2.22.1-SNAPSHOT) |
+
+Ohne Vault bzw. Economy-Plugin läuft Blockstead weiter: `/plot claim` ist dann gesperrt (außer bei Preis 0),
+das Team kann Grundstücke mit `/plot assign` vergeben. Den Status zeigt eine Zeile im Log kurz nach dem Start
+(„Server-Währung über Vault: …“ bzw. eine Warnung).
+
+**Aufgabenteilung:** Blockstead kümmert sich nur um Grundstücke (plus `/announce`, Login-Nachricht und
+LuckPerms-Präfixe). Allgemeine Befehle wie `/spawn`, `/balance`, `/pay`, `/god` oder `/suicide` und die
+Währung selbst kommen von EssentialsX (bzw. einem anderen Plugin).
 
 ## Installation
 
@@ -26,6 +36,26 @@ Diese Seite ist für Serverbetreibende und das Server-Team. Was Spielende wissen
 2. Die alte Jar aus `plugins/` entfernen, die neue hineinlegen, Server neu starten.
 3. Hinweise zur jeweiligen Version in [CHANGELOG.md](../CHANGELOG.md) lesen – insbesondere neue Einträge
    der `config.yml`, die nicht automatisch ergänzt werden.
+
+### Von 1.x auf 2.0.0
+
+Blockstead 2.0.0 gibt die eigene Währung und die allgemeinen Befehle ab:
+
+* **Entfernt:** `/coins`, `/spawn`, `/die` (`/suicide`), `/invincible` und die Rechte `bs.coins*`, `bs.spawn`,
+  `bs.die`, `bs.invincible*`; `/announce` hat keinen Alias `/broadcast` mehr. Ersatz bei EssentialsX:
+  `/balance`, `/pay`, `/eco`, `/baltop`, `/spawn`, `/setspawn`, `/suicide`, `/god` – Rechte dafür im
+  Economy- bzw. Rechte-Plugin vergeben (`essentials.*`).
+* **Vorher:** `/invincible` mit 1.0.1 bei allen ausschalten, die es benutzt haben. Die Unverwundbarkeit steht
+  in den Spieldaten und lässt sich ohne den Befehl nicht mehr abschalten (`/god` ist ein eigener Schalter).
+* **Kontostände:** Beim ersten Start mit Vault und Economy-Plugin überträgt Blockstead jedes alte Konto
+  einmal. Der Stand im Economy-Plugin wird auf den alten Wert **gesetzt**, nicht addiert. Im Log steht je
+  Konto eine Zeile und am Ende „Übertragung abgeschlossen: x von N Konto/Konten übertragen.“ Fehlgeschlagene
+  Konten werden beim nächsten Start erneut versucht. Mit `economy.import-old-balances: false` werden die alten
+  Stände nicht übertragen.
+* **Datenbank:** Schema-Version 4. Zurück auf 1.x geht nur über die Sicherung von `data.db` vor dem Update
+  (ältester Ordner vom Update-Tag unter `plugins/Blockstead/backups/`) – 1.x startet mit Schema 4 absichtlich nicht.
+* **`config.yml`:** `economy.currency-name` und `economy.start-balance` werden ignoriert (Name, Zeichen und
+  Startguthaben stellt man im Economy-Plugin ein). Neu ist `economy.import-old-balances` (Standard `true`).
 
 Vom Vorgänger **„Buildserver“**: Die alte Jar (z.B. `buildserver-0.0.1-SNAPSHOT.jar`) muss entfernt werden – beide gleichzeitig
 würden sich gegenseitig stören. Rechte (`bs.*`) und WorldGuard-Regionen bleiben gleich; Details im
@@ -75,11 +105,7 @@ Welt) und **aus der Server-Konsole Pflicht**, z.B. `plot assign plot_3 Alex worl
 | `/plot list <Name>` | Grundstücke einer anderen Person | `bs.plot.list.others` |
 | `/plot trust`, `/plot untrust` auf fremden Grundstücken | Rollen verwalten wie Besitzende | `bs.plot.trust.others` |
 | – | Wird von Grundstücks-Rollen nicht eingeschränkt | `bs.plot.bypass` |
-| `/coins <Name>` | Guthaben einer anderen Person | `bs.coins.others` |
-| `/coins give\|take\|set <Name> <Betrag>` | Guthaben ändern | `bs.coins.admin` |
-| `/announce <Nachricht>`, `/broadcast …` | Auffällige Server-Nachricht an alle (Chat, Einblendung, Ton) | `bs.announce` |
-| `/invincible [Name]` | Unverwundbarkeit umschalten (eigene bzw. einer anderen Person) | `bs.invincible`, `bs.invincible.others` |
-| `/die`, `/suicide` | Sich selbst töten | `bs.die` |
+| `/announce <Nachricht>` | Auffällige Server-Nachricht an alle (Chat, Einblendung, Ton) | `bs.announce` |
 
 **Zurücksetzen:** `reset` stellt den Zustand beim Anlegen (oder beim letzten `/plot snapshot`) wieder her –
 exakt in der Grundstücksform, Nachbargrundstücke bleiben unberührt; Tiere, Rahmen und Rüstungsständer auf
@@ -88,7 +114,12 @@ Sekunden wiederholen. Ohne Sicherung (Grundstücke von vor Version 1.0.0) wird `
 geändert. Zurücksetzen läuft im Hauptthread – bei großen Grundstücken kann der Server kurz stocken.
 
 **Aus der Konsole** gehen `info`, `trust`, `untrust`, `remove`, `assign`, `unassign`, `reset`, `snapshot`,
-`list <Name>`, `/coins`, `/announce` und `/invincible <Name>`.
+`list <Name>` und `/announce`.
+
+**Erstattungen:** Beim Freigeben oder Löschen geht der Kaufpreis über das Economy-Plugin an die Person, die
+bezahlt hat. Kann das nicht gebucht werden (z.B. Economy-Plugin fehlt), wird das Grundstück trotzdem
+freigegeben; im Log steht dann ein Fehler „Erstattung fehlgeschlagen: …“ mit Name, UUID, Betrag und dem
+Hinweis, von Hand zu erstatten (z.B. `/eco give <Name> <Betrag>`).
 
 ## Rechte
 
@@ -102,8 +133,6 @@ anderen über LuckPerms, z.B. `lp group team permission set bs.plot.assign true`
 | `bs.plot.unclaim` | alle | Eigenes Grundstück zurückgeben |
 | `bs.plot.home` | alle | Zuhause setzen und hinteleportieren |
 | `bs.plot.trust` | alle | Rollen auf eigenen Grundstücken vergeben |
-| `bs.coins` | alle | Eigenes Guthaben |
-| `bs.spawn` | alle | `/spawn` |
 | alle übrigen `bs.*` | Op | siehe Team-Befehle |
 
 `/blockstead` (Version, Lizenz, Quellcode) braucht kein Recht.
@@ -119,8 +148,8 @@ einem Neustart.
 | `join-info` | Login-Nachricht (z.B. Teamspeak, Discord); MiniMessage-Formatierung, `http(s)://`-Adressen werden anklickbar. Für Teamspeak einen Einladungslink wie `https://invite.teamspeak.com/<Adresse>` verwenden – Minecraft öffnet nur http(s)-Links |
 | `announce` | Präfix, Einblendung und Ton von `/announce` |
 | `backups` | Sicherung beim Start an/aus, Anzahl der aufbewahrten Sicherungen |
-| `economy` | Name der Währung, Startguthaben |
-| `plots` | Preis, Wartezeit für `unclaim reset`, WorldGuard-Priorität, Standard-Flags neuer Grundstücke |
+| `economy` | `import-old-balances`: alte Kontostände aus 1.x einmalig übertragen (Währungsname und Startguthaben stellt man im Economy-Plugin ein) |
+| `plots` | Preis (ganze Zahl in der Währung des Economy-Plugins), Wartezeit für `unclaim reset`, WorldGuard-Priorität, Standard-Flags neuer Grundstücke |
 | `roles` | Rollen unterhalb von „besitzende“ und ihre Rechte (`build`, `containers`, `doors`, `workstations`, `entities`, `home`) |
 
 Hinweise:
@@ -134,8 +163,9 @@ Hinweise:
 
 ## Daten und Sicherungen
 
-`plugins/Blockstead/data.db` (SQLite) enthält Kontostände, Zuhause, Rollen und wer welches Grundstück für
-wie viel gekauft hat. Besitzende und Mitglieder stehen in WorldGuard; die Sicherungen zum Zurücksetzen
+`plugins/Blockstead/data.db` (SQLite) enthält Zuhause, Rollen und wer welches Grundstück für wie viel gekauft
+hat (für die Erstattung). Die Kontostände führt seit 2.0.0 das Economy-Plugin; die alten Stände aus 1.x
+stehen nur noch als Nachweis in der Tabelle `accounts` (mit Zeitpunkt der Übertragung). Besitzende und Mitglieder stehen in WorldGuard; die Sicherungen zum Zurücksetzen
 liegen als WorldEdit-Schematic in `plugins/Blockstead/snapshots/<Welt>/<ID>.schem`.
 
 * **Sicherung bei jedem Start:** Bevor das Plugin etwas ändert (auch vor Datenmigrationen eines Updates),
