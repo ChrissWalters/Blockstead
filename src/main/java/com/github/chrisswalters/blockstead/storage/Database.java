@@ -23,7 +23,7 @@ import java.sql.Statement;
 public class Database implements AutoCloseable {
 
     /** Schema-Version, die diese Plugin-Version kennt. Bei jedem neuen Migrationsblock erhöhen. */
-    public static final int SCHEMA_VERSION = 3;
+    public static final int SCHEMA_VERSION = 4;
 
     private final Connection connection;
 
@@ -99,6 +99,13 @@ public class Database implements AutoCloseable {
                         + "key TEXT PRIMARY KEY, "
                         + "value TEXT NOT NULL)");
                 statement.execute("PRAGMA user_version = 3");
+            }
+
+            if (version < 4) {
+                // Ab 2.0.0 führt das Economy-Plugin die Kontostände; accounts bleibt nur als Quelle für die
+                // einmalige Übertragung (BalanceImport). NULL = noch nicht übertragen.
+                statement.execute("ALTER TABLE accounts ADD COLUMN imported_at INTEGER");
+                statement.execute("PRAGMA user_version = 4");
             }
         }
     }

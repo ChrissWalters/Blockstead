@@ -44,8 +44,7 @@ public class PluginConfig {
     private final boolean announceSound;
     private final boolean backupsEnabled;
     private final int backupsKeep;
-    private final String currencyName;
-    private final long startBalance;
+    private final boolean importOldBalances;
     private final long plotPrice;
     private final int resetCooldownMinutes;
     private final int plotPriority;
@@ -54,7 +53,7 @@ public class PluginConfig {
 
     private PluginConfig(boolean displayEnabled, String chatFormat, String tabFormat, boolean tabSorting, boolean nametag,
                          List<Component> joinInfo, String announcePrefix, boolean announceTitle, boolean announceSound,
-                         boolean backupsEnabled, int backupsKeep, String currencyName, long startBalance, long plotPrice,
+                         boolean backupsEnabled, int backupsKeep, boolean importOldBalances, long plotPrice,
                          int resetCooldownMinutes, int plotPriority, Map<Flag<?>, Object> defaultPlotFlags, Map<String, PlotRole> roles) {
         this.displayEnabled = displayEnabled;
         this.chatFormat = chatFormat;
@@ -67,8 +66,7 @@ public class PluginConfig {
         this.announceSound = announceSound;
         this.backupsEnabled = backupsEnabled;
         this.backupsKeep = backupsKeep;
-        this.currencyName = currencyName;
-        this.startBalance = startBalance;
+        this.importOldBalances = importOldBalances;
         this.plotPrice = plotPrice;
         this.resetCooldownMinutes = resetCooldownMinutes;
         this.plotPriority = plotPriority;
@@ -96,19 +94,18 @@ public class PluginConfig {
         boolean announceSound = config.getBoolean("announce.sound", true);
         boolean backupsEnabled = config.getBoolean("backups.enabled", true);
         int backupsKeep = Math.max(1, config.getInt("backups.keep", 10));
-        String currencyName = config.getString("economy.currency-name", "Coins");
-        long startBalance = nonNegative(config.getLong("economy.start-balance", 100), "economy.start-balance", log);
+        // economy.currency-name / economy.start-balance aus 1.x werden ignoriert (übernimmt das Economy-Plugin)
+        boolean importOldBalances = config.getBoolean("economy.import-old-balances", true);
         long plotPrice = nonNegative(config.getLong("plots.price", 100), "plots.price", log);
         int resetCooldownMinutes = Math.max(0, config.getInt("plots.reset-cooldown-minutes", 10));
         int priority = config.getInt("plots.priority", 10);
         Map<Flag<?>, Object> flags = parseFlags(config.getConfigurationSection("plots.default-flags"), log);
         Map<String, PlotRole> roles = parseRoles(config.getConfigurationSection("roles"), log);
-        log.info("Konfiguration geladen: Währung " + currencyName + ", Startguthaben " + startBalance
-                + ", Grundstückspreis " + plotPrice + ", Grundstücks-Priorität " + priority + ", " + flags.size()
+        log.info("Konfiguration geladen: Grundstückspreis " + plotPrice + ", Grundstücks-Priorität " + priority + ", " + flags.size()
                 + " Standard-Flags, Rollen " + roles.keySet());
         return new PluginConfig(displayEnabled, chatFormat, tabFormat, tabSorting, nametag,
                 joinInfo, announcePrefix, announceTitle, announceSound,
-                backupsEnabled, backupsKeep, currencyName, startBalance, plotPrice,
+                backupsEnabled, backupsKeep, importOldBalances, plotPrice,
                 resetCooldownMinutes, priority, flags, roles);
     }
 
@@ -229,17 +226,12 @@ public class PluginConfig {
         return backupsKeep;
     }
 
-    /** Name der Währung, z.B. "Coins". */
-    public String getCurrencyName() {
-        return currencyName;
+    /** Ob alte Kontostände aus Blockstead 1.x einmalig in das Economy-Plugin übertragen werden. */
+    public boolean isImportOldBalances() {
+        return importOldBalances;
     }
 
-    /** Guthaben neuer Konten. */
-    public long getStartBalance() {
-        return startBalance;
-    }
-
-    /** Preis für {@code /plot claim}. */
+    /** Preis für {@code /plot claim} (ganze Zahl in der Währung des Economy-Plugins). */
     public long getPlotPrice() {
         return plotPrice;
     }

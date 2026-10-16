@@ -72,7 +72,7 @@ public class EconomyService {
         return isAvailable() ? VaultEconomy.deposit(player, amount) : unavailable();
     }
 
-    /** Setzt den Kontostand (nur für die einmalige Übertragung alter Kontostände aus Blockstead 1.x). */
+    /** Setzt den Kontostand (nur für die einmalige Übertragung alter Kontostände, siehe {@link BalanceImport}). */
     Transaction setBalance(OfflinePlayer player, long amount) {
         return isAvailable() ? VaultEconomy.setBalance(player, amount) : unavailable();
     }

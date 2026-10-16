@@ -46,15 +46,20 @@ backups:
   keep: 10
 
 economy:
-  # Name der Server-Währung in allen Nachrichten.
-  currency-name: Coins
-  # Guthaben, mit dem jedes Konto startet (beim ersten Join). Standard: genau ein Grundstückspreis,
-  # damit alle sich ein Grundstück selbst nehmen können.
-  start-balance: 100
+  # Seit Blockstead 2.0.0 führt ein Economy-Plugin (z.B. EssentialsX) die Kontostände, angebunden über
+  # Vault. Name/Zeichen der Währung und das Startguthaben neuer Spielender stellt man dort ein
+  # (bei EssentialsX: currency-symbol, starting-balance). Ohne Economy-Plugin kann man Grundstücke
+  # nicht kaufen; das Team kann sie weiterhin zuweisen.
+  #
+  # Kontostände aus Blockstead 1.x einmalig in das Economy-Plugin übertragen. Der Stand dort wird auf
+  # den alten Wert GESETZT (nicht addiert). Jedes Konto wird nur einmal übertragen; das Ergebnis steht
+  # im Server-Log ("Übertragung abgeschlossen: …"). false = alte Kontostände verwerfen.
+  import-old-balances: true
 
 plots:
-  # Preis für "/plot claim". Beim Freigeben ("/plot unclaim", "/plot unassign", "/plot remove")
-  # bekommt die Person, die bezahlt hat, den gezahlten Betrag zurück.
+  # Preis für "/plot claim" – ganze Zahl in der Währung des Economy-Plugins. Beim Freigeben
+  # ("/plot unclaim", "/plot unassign", "/plot remove") bekommt die Person, die bezahlt hat, den
+  # gezahlten Betrag zurück. 0 = kostenlos (geht auch ohne Economy-Plugin).
   price: 100
 
   # Wartezeit in Minuten zwischen zwei "/plot unclaim reset" derselben Person (0 = keine).

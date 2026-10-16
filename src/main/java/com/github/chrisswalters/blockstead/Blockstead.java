@@ -6,6 +6,7 @@ import com.github.chrisswalters.blockstead.commands.PlotCommand;
 import com.github.chrisswalters.blockstead.config.PluginConfig;
 import com.github.chrisswalters.blockstead.display.DisplayService;
 import com.github.chrisswalters.blockstead.display.DisplaySetup;
+import com.github.chrisswalters.blockstead.economy.BalanceImport;
 import com.github.chrisswalters.blockstead.economy.EconomyService;
 import com.github.chrisswalters.blockstead.listeners.*;
 import com.github.chrisswalters.blockstead.players.PlayerUtility;
@@ -149,7 +150,14 @@ public final class Blockstead extends JavaPlugin {
 
         // Erst im ersten Tick, wenn alle Plugins aktiv sind: Economy-Plugins wie EssentialsX melden sich bei
         // Vault schon beim Laden an, sind aber erst nach ihrem eigenen onEnable benutzbar
-        getServer().getScheduler().runTask(this, () -> economy.logStatus(getLogger()));
+        getServer().getScheduler().runTask(this, () -> {
+            economy.logStatus(getLogger());
+            try {
+                BalanceImport.run(database, economy, pluginConfig.isImportOldBalances(), getLogger());
+            } catch (DataException e) {
+                getLogger().log(Level.SEVERE, e.getMessage(), e);
+            }
+        });
     }
 
     @Override
