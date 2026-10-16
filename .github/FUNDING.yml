@@ -1,6 +1,6 @@
-# Der "Sponsor"-Knopf auf der Repository-Seite.
+# The "Sponsor" button on the repository page.
 #
-# Nichts an der Software hängt davon ab: Blockstead ist AGPL-3.0, vollständig und ohne Bezahlfunktionen.
+# Nothing about the software depends on it: Blockstead is AGPL-3.0, complete and free of paid tiers.
 
-# Nur der Name – GitHub baut den Link selbst. Eine volle URL ergibt einen kaputten Knopf.
+# The handle only – GitHub builds the link itself. A full URL gives a broken button.
 ko_fi: chrisswalters

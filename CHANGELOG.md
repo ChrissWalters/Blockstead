@@ -1,106 +1,157 @@
-# Änderungen
+# Changelog
+
+*Auf Deutsch: [CHANGELOG.de.md](CHANGELOG.de.md)*
+
+## 2.1.0
+
+Language support: Blockstead speaks the language of the Minecraft client.
+
+### New
+- All texts come from language files (`lang/en.yml`, `lang/de.yml`). Every person gets the language of their
+  Minecraft client (`language: auto`, default) – Bedrock players through Geyser, too – or the server sets one
+  language for everyone (`language: de`). Fallback language for the console and missing languages:
+  `fallback-language` (default `en`).
+- Own or changed texts: files in `plugins/Blockstead/lang/`. They only override the keys they contain; a new
+  file adds a new language.
+- Messages to everyone (join, quit) go to every person in their own language.
+- Roles in `config.yml` can have `aliases`; without `name`, the role name is shown translated.
+- The build checks that all language files have the same keys and placeholders.
+- Translations can be contributed through pull requests (only files in `src/main/resources/lang/`).
+
+### Changed
+- New default role keys: `owner`, `resident`, `builder`, `guest`. The previous keys (`besitzende`,
+  `mitbewohnende`, `bauhilfe`, `gast`) remain valid as aliases – existing configs and stored roles keep working
+  unchanged.
+- Log messages and the comments in `config.yml` are English.
+- `/plot create` no longer sets the `region-name` flag; the message when entering comes translated from the
+  language file. Old plots with the former default text show the translated message, too.
+- Argument names of the commands while typing are English (`<world>`, `<role>`); the commands themselves are
+  unchanged.
+- Documentation: README and `docs/admin` in English and German, the remaining documentation and the changelog
+  also in English.
+
+### Notes on updating from 2.0.x
+- For a German-only server, set `language: de` and `fallback-language: de` in `config.yml` – otherwise every
+  person gets the language of their client and the console English.
+- If you want the new role keys, take the `roles` section from the new template; the `aliases` keep stored
+  roles valid. It is not necessary.
 
 ## 2.0.1
 
-Fehlerbehebungen und Absicherung nach einer Durchsicht des gesamten Projekts.
+Bug fixes and hardening after a review of the whole project.
 
-- `/plot tp` landet möglichst mittig und sicher: bei Polygonen auf einem Punkt mit gutem Abstand zum Rand,
-  nahe dem Flächenschwerpunkt (bei L-förmigen Grundstücken vorher: auf einem Eckpunkt am Rand), und nie auf
-  Lava, Feuer, Magma, Kaktus o.Ä. – sonst auf dem nächstgelegenen sicheren Punkt im Grundstück. Gibt es keinen,
-  wird nicht teleportiert.
-- Nametag-Teams (`bs_…`), die nach einem Absturz mit der Welt gespeichert blieben, werden beim Start entfernt.
-- `/announce` und `join-info`: Klick-Aktionen, die einen Befehl ausführen (`<click:run_command:…>`), werden
-  entfernt; Links und `suggest_command` bleiben.
-- `/blockstead` zeigt bei veränderten Fassungen ohne `website` in der plugin.yml den Link zum Original statt
-  „null“.
-- Abgelaufene Wartezeiten und Sicherheitsabfragen werden aus dem Speicher entfernt.
-- Build-Pipeline: Schreibrecht nur noch für den Release-Job bei Versions-Tags.
+- `/plot tp` lands as centrally and safely as possible: on polygons on a spot well away from the edge, close to
+  the centroid (on L-shaped plots it used to land on a corner point at the edge), and never on lava, fire,
+  magma, cactus or similar – otherwise on the nearest safe spot on the plot. If there is none, there is no
+  teleport.
+- Nametag teams (`bs_…`) that remained saved with the world after a crash are removed at startup.
+- `/announce` and `join-info`: click actions that run a command (`<click:run_command:…>`) are removed; links
+  and `suggest_command` remain.
+- For modified versions without `website` in plugin.yml, `/blockstead` shows the link to the original instead
+  of "null".
+- Expired waiting times and confirmations are removed from memory.
+- Build pipeline: write permission only for the release job on version tags.
 
 ## 2.0.0
 
-Blockstead konzentriert sich auf Grundstücke. Allgemeine Befehle und die Währung übernimmt EssentialsX (bzw.
-ein anderes Economy-Plugin), angebunden über Vault.
+Blockstead concentrates on plots. General commands and the currency are taken over by EssentialsX (or another
+economy plugin), connected through Vault.
 
-### Entfernt
-- `/coins` (inkl. `give|take|set`) und die eigene Kontoführung – Ersatz: `/balance`, `/pay`, `/eco`, `/baltop`
-  des Economy-Plugins.
-- `/spawn` – Ersatz: `/spawn` und `/setspawn` von EssentialsXSpawn.
-- `/die` und `/suicide` – Ersatz: `/suicide` von EssentialsX.
-- `/invincible` – Ersatz: `/god` von EssentialsX.
-- Alias `/broadcast` für `/announce` (Konflikt mit EssentialsX); `/announce` selbst bleibt.
-- Rechte `bs.coins`, `bs.coins.others`, `bs.coins.admin`, `bs.spawn`, `bs.die`, `bs.invincible`,
+### Removed
+- `/coins` (including `give|take|set`) and the own bookkeeping – replacement: `/balance`, `/pay`, `/eco`,
+  `/baltop` of the economy plugin.
+- `/spawn` – replacement: `/spawn` and `/setspawn` from EssentialsXSpawn.
+- `/die` and `/suicide` – replacement: `/suicide` from EssentialsX.
+- `/invincible` – replacement: `/god` from EssentialsX.
+- Alias `/broadcast` for `/announce` (conflict with EssentialsX); `/announce` itself stays.
+- Permissions `bs.coins`, `bs.coins.others`, `bs.coins.admin`, `bs.spawn`, `bs.die`, `bs.invincible`,
   `bs.invincible.others`.
-- `config.yml`: `economy.currency-name` und `economy.start-balance` (werden ignoriert; Name, Zeichen und
-  Startguthaben stellt man im Economy-Plugin ein).
+- `config.yml`: `economy.currency-name` and `economy.start-balance` (ignored; name, symbol and starting balance
+  are set in the economy plugin).
 
-### Geändert
-- `/plot claim` bucht über Vault beim Economy-Plugin ab; ohne Vault bzw. Economy-Plugin ist Kaufen gesperrt
-  (außer bei Preis 0), `/plot assign` geht weiter.
-- Erstattungen beim Freigeben und Löschen laufen über das Economy-Plugin. Schlägt eine Erstattung fehl, wird
-  das Grundstück trotzdem freigegeben und der Betrag mit Name im Log gemeldet.
-- Beträge erscheinen im Format des Economy-Plugins.
-- Vault ist eine optionale Abhängigkeit (`softdepend`), wie LuckPerms.
+### Changed
+- `/plot claim` charges through Vault at the economy plugin; without Vault or an economy plugin buying is
+  blocked (unless the price is 0), `/plot assign` keeps working.
+- Refunds when releasing and deleting go through the economy plugin. If a refund fails, the plot is released
+  anyway and the amount is reported with the name in the log.
+- Amounts appear in the economy plugin's format.
+- Vault is an optional dependency (`softdepend`), like LuckPerms.
 
-### Neu
-- Einmalige Übertragung der Kontostände aus 1.x in das Economy-Plugin (gesetzt, nicht addiert), mit Log je
-  Konto; abschaltbar mit `economy.import-old-balances: false`.
-- Log-Zeile zum Status der Server-Währung kurz nach dem Start.
+### New
+- One-time transfer of the balances from 1.x to the economy plugin (set, not added), with a log line per
+  account; can be switched off with `economy.import-old-balances: false`.
+- A log line about the status of the server currency shortly after startup.
 
-### Hinweise zum Update von 1.x
-- **Vorher ein komplettes Server-Backup machen.**
-- **`/invincible` vorher bei allen ausschalten**, die es benutzt haben (mit 1.0.1). Die Unverwundbarkeit steht
-  in den Spieldaten und lässt sich danach ohne den Befehl nicht mehr abschalten.
-- Vault (oder VaultUnlocked) und ein Economy-Plugin installieren, z.B. EssentialsX – für Paper 26.3 derzeit
-  der Dev-Build 2.22.1-SNAPSHOT. Ohne beides können Grundstücke nicht gekauft werden.
-- Rechte für die Ersatzbefehle im Rechte-Plugin vergeben (`essentials.balance`, `essentials.spawn`, …).
-- Datenbank-Schema 4: Zurück auf 1.x geht nur über die Sicherung von `data.db` vor dem Update; 1.x startet mit
-  Schema 4 absichtlich nicht.
-- Details: `docs/admin.md`, Abschnitt „Von 1.x auf 2.0.0“.
+### Notes on updating from 1.x
+- **Make a complete server backup first.**
+- **Turn `/invincible` off for everyone** who used it (with 1.0.1) before updating. Invulnerability is stored in
+  the player data and can't be switched off without the command afterwards.
+- Install Vault (or VaultUnlocked) and an economy plugin, e.g. EssentialsX – for Paper 26.3 currently the dev
+  build 2.22.1-SNAPSHOT. Without both, plots can't be bought.
+- Give the permissions for the replacement commands in the permissions plugin (`essentials.balance`,
+  `essentials.spawn`, …).
+- Database schema 4: going back to 1.x is only possible with the backup of `data.db` from before the update;
+  1.x refuses to start with schema 4 on purpose.
+- Details: `docs/admin.md`, section "From 1.x to 2.0.0".
 
 ## 1.0.1
 
-- `/plot create` lehnt eine Auswahl ab, die ein bestehendes Grundstück überlappt, und warnt, wenn eine andere
-  Region (z.B. eine Stadt) das neue Grundstück mit gleicher oder höherer Priorität überlappt.
-- Die Konsistenzprüfung beim Start meldet überlappende Grundstücke und Regionen mit zu hoher Priorität.
-- Doku: Abschnitt „Überlappungen und Stadtbereiche“ in `docs/admin.md`.
-- **Benötigt jetzt Paper 26.3** (statt 26.2): Unter 26.3 meldet die alte Abfrage der Unverwundbarkeit falsche
-  Werte, `/invincible` nutzt deshalb die neue Methode aus 26.3. Getestet mit WorldEdit 7.4.6.
+- `/plot create` refuses a selection that overlaps an existing plot and warns if another region (e.g. a city)
+  overlaps the new plot with the same or a higher priority.
+- The consistency check at startup reports overlapping plots and regions with a too high priority.
+- Documentation: section "Overlaps and city areas" in `docs/admin.md`.
+- **Now requires Paper 26.3** (instead of 26.2): under 26.3 the old check of invulnerability reports wrong
+  values, so `/invincible` uses the new method from 26.3. Tested with WorldEdit 7.4.6.
 
 ## 1.0.0
 
-Erste öffentliche Version von **Blockstead** (vorher „Buildserver“) – ein CityBuild-Plugin für Paper 26.2.
+First public version of **Blockstead** (formerly "Buildserver") – a CityBuild plugin for Paper 26.2.
 
-### Grundstücke
-- Anlegen aus einer WorldEdit-Auswahl (Quader oder Polygon), immer vom tiefsten bis zum höchsten Punkt der Welt (`/plot create`).
-- Kaufen mit der Server-Währung (`/plot claim`); alle starten mit genug Guthaben für ein Grundstück.
-- Zuweisen und Entziehen durch das Team (`/plot assign`, `/plot unassign`), Freigeben durch Besitzende (`/plot unclaim`) mit voller Erstattung des Kaufpreises.
-- Infos und Übersicht (`/plot info`, `/plot list`).
-- Rollen auf Grundstücken: Besitzende, Mitbewohnende, Bauhilfe, Gast (`/plot trust`, `/plot untrust`); Rechte pro Rolle in der `config.yml` anpassbar.
-- Homes (`/plot home`, `/plot home set`), Teleport zu Grundstücken für das Team (`/plot tp`), `/spawn` für alle.
-- Zurücksetzen auf den Zustand beim Anlegen (`reset`-Option, `/plot reset`, `/plot snapshot`) mit Sicherheitsabfrage und Wartezeit für Spielende.
-- Nachrichten beim Betreten und Verlassen von Grundstücken (eigener Text über die Flag `region-name`).
-- Team-Befehle auch aus der Server-Konsole (mit Weltangabe).
+### Plots
+- Creating from a WorldEdit selection (cuboid or polygon), always from the lowest to the highest point of the
+  world (`/plot create`).
+- Buying with the server currency (`/plot claim`); everyone starts with enough money for one plot.
+- Assigning and removing by staff (`/plot assign`, `/plot unassign`), giving back by owners (`/plot unclaim`)
+  with a full refund of the price.
+- Information and overview (`/plot info`, `/plot list`).
+- Roles on plots: owner, resident, builder, guest (`/plot trust`, `/plot untrust`); rights per role adjustable
+  in `config.yml`.
+- Homes (`/plot home`, `/plot home set`), teleport to plots for staff (`/plot tp`), `/spawn` for everyone.
+- Restoring to the state at creation (`reset` option, `/plot reset`, `/plot snapshot`) with confirmation and a
+  waiting time for players.
+- Messages when entering and leaving plots (own text through the `region-name` flag).
+- Staff commands from the server console, too (with a world argument).
 
 ### Server
-- Server-Währung „Coins“ (Name einstellbar) mit `/coins`.
-- LuckPerms-Präfixe und -Suffixe in Chat, Tab-Liste und über dem Kopf; Tab-Liste nach Gruppengewicht sortiert. LuckPerms ist optional.
-- Login-Nachricht mit anklickbaren Links (z.B. Teamspeak, Discord, Website).
-- Auffällige Server-Nachrichten für das Team (`/announce`).
-- `/blockstead` zeigt Version, Lizenz und Link zum Quellcode.
-- Eigene Join- und Quit-Nachrichten.
+- Server currency "Coins" (name adjustable) with `/coins`.
+- LuckPerms prefixes and suffixes in chat, tab list and above the head; tab list sorted by group weight.
+  LuckPerms is optional.
+- Join message with clickable links (e.g. Teamspeak, Discord, website).
+- Highlighted server messages for staff (`/announce`).
+- `/blockstead` shows the version, licence and a link to the source code.
+- Own join and quit messages.
 
-### Betrieb
-- Sicherung von Plugin-Datenbank und WorldGuard-Regionen bei jedem Start, Schutz vor älteren Plugin-Versionen, Konsistenzprüfung.
-- Alle Befehle mit Tab-Vervollständigung; Befehle ohne Recht werden ausgeblendet.
-- Build-Pipeline auf GitHub mit Release bei Tags `v*`, lokaler Testserver (`./gradlew runServer`).
+### Operation
+- Backup of the plugin database and the WorldGuard regions at every start, protection against older plugin
+  versions, consistency check.
+- All commands with tab completion; commands without permission are hidden.
+- Build pipeline on GitHub with a release for `v*` tags, local test server (`./gradlew runServer`).
 
-### Hinweise zum Update vom Vorgänger „Buildserver“
-- **Vorher ein komplettes Server-Backup machen.**
-- **Die alte Jar entfernen** (z.B. `buildserver-0.0.1-SNAPSHOT.jar`) – das Plugin heißt jetzt Blockstead, beide gleichzeitig würden sich stören. Der Datenordner ist jetzt `plugins/Blockstead/`; der Vorgänger hatte keine eigenen Daten, es muss nichts umgezogen werden. Rechte (`bs.*`) und die WorldGuard-Flag `region-name` bleiben gleich.
-- Java 25 und Paper 26.2 werden benötigt; WorldEdit und WorldGuard sind Pflicht, LuckPerms ist optional (ab 5.5.85).
-- Beim ersten Start werden von allen bestehenden Grundstücken die Flags `interact`, `use`, `chest-access`, `ride`, `vehicle-place`, `vehicle-destroy` und `lighter` entfernt, falls sie auf `deny` stehen. Sie sperrten auch Besitzende und Mitglieder aus; Fremde sperrt WorldGuard ohnehin aus. Jede Änderung steht im Log.
-- Beim ersten Start wird `plugins/Blockstead/config.yml` mit allen Einstellungen neu angelegt – danach prüfen und anpassen (z.B. `join-info`, Preise, Rollen).
-- Alle Spielenden bekommen beim nächsten Join das Startguthaben (Standard 100 Coins), auch wer schon ein Grundstück hat.
-- Grundstücke von vor dieser Version haben keine Sicherung zum Zurücksetzen; bei Bedarf mit `/plot snapshot <ID>` anlegen.
-- Der alte, ungenutzte MySQL-Code wurde entfernt.
-- Lizenz: GNU AGPL-3.0 oder später.
+### Notes on updating from the predecessor "Buildserver"
+- **Make a complete server backup first.**
+- **Remove the old jar** (e.g. `buildserver-0.0.1-SNAPSHOT.jar`) – the plugin is now called Blockstead, both at
+  the same time would get in each other's way. The data folder is now `plugins/Blockstead/`; the predecessor
+  had no data of its own, nothing has to be moved. Permissions (`bs.*`) and the WorldGuard flag `region-name`
+  stay the same.
+- Java 25 and Paper 26.2 are required; WorldEdit and WorldGuard are mandatory, LuckPerms is optional (5.5.85 or
+  newer).
+- At the first start, the flags `interact`, `use`, `chest-access`, `ride`, `vehicle-place`, `vehicle-destroy`
+  and `lighter` are removed from all existing plots if they are set to `deny`. They locked out owners and
+  members, too; WorldGuard keeps strangers out anyway. Every change is logged.
+- At the first start, `plugins/Blockstead/config.yml` is created with all settings – check and adjust it
+  afterwards (e.g. `join-info`, prices, roles).
+- Every player gets the starting balance (default 100 Coins) at their next join, including those who already
+  own a plot.
+- Plots from before this version have no reset snapshot; create one with `/plot snapshot <ID>` if needed.
+- The old, unused MySQL code was removed.
+- Licence: GNU AGPL-3.0 or later.

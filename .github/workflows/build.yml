@@ -32,7 +32,31 @@ jobs:
           name: blockstead-plugin
           path: build/libs/*.jar
 
-  # Pushing a tag like v2.0.1 attaches the jar from the build job to a GitHub release
+  # Pull requests are only accepted for translations: fail if anything outside the language folder changes
+  # (only for pull requests from forks – the owner's own branches are not affected)
+  pr-files:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Only language files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          outside=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -v '^src/main/resources/lang/[^/]*\.yml$' || true)
+          if [ -n "$outside" ]; then
+            echo "Pull requests are only accepted for translations (files in src/main/resources/lang/)."
+            echo "Pull Requests werden nur für Übersetzungen angenommen (Dateien in src/main/resources/lang/)."
+            echo "Other changed files:"
+            echo "$outside"
+            exit 1
+          fi
+
+  # Pushing a tag like v2.1.0 attaches the jar from the build job to a GitHub release
   release:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build
@@ -47,12 +71,15 @@ jobs:
           name: blockstead-plugin
           path: dist
 
-      # Release-Text = Abschnitt "## <Version>" aus CHANGELOG.md (Tag v2.0.1 -> "## 2.0.1")
+      # Release text = section "## <version>" from CHANGELOG.md (English), then from CHANGELOG.de.md (German)
       - name: Release notes
         run: |
           version="${GITHUB_REF_NAME#v}"
-          awk -v v="## $version" '$0==v{f=1;next} /^## /{f=0} f' CHANGELOG.md > release-notes.md
-          test -s release-notes.md || { echo "Kein Abschnitt '## $version' in CHANGELOG.md"; exit 1; }
+          section() { awk -v v="## $version" '$0==v{f=1;next} /^## /{f=0} f' "$1"; }
+          en=$(section CHANGELOG.md); de=$(section CHANGELOG.de.md)
+          test -n "$en" || { echo "No section '## $version' in CHANGELOG.md"; exit 1; }
+          test -n "$de" || { echo "No section '## $version' in CHANGELOG.de.md"; exit 1; }
+          { echo "$en"; echo; echo "---"; echo; echo "**Deutsch**"; echo; echo "$de"; } > release-notes.md
 
       - name: Release
         uses: softprops/action-gh-release@v3

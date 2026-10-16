@@ -1,16 +1,16 @@
-name: Idee oder Wunsch
-description: Ein Vorschlag für eine neue Funktion oder eine Verbesserung.
+name: Idea or request / Idee oder Wunsch
+description: A suggestion for a new feature or an improvement. / Ein Vorschlag für eine neue Funktion oder eine Verbesserung.
 labels: [enhancement]
 body:
   - type: textarea
     id: idee
     attributes:
-      label: Was wünschst du dir?
-      description: Beschreibe die Idee und wofür sie auf eurem Server gut wäre.
+      label: What would you like? / Was wünschst du dir?
+      description: Describe the idea and what it would be good for on your server. / Beschreibe die Idee und wofür sie auf eurem Server gut wäre.
     validations:
       required: true
   - type: textarea
     id: heute
     attributes:
-      label: Wie löst ihr das bisher?
-      description: Optional – Umwege oder andere Plugins, die ihr dafür nutzt.
+      label: How do you solve it today? / Wie löst ihr das bisher?
+      description: Optional – workarounds or other plugins you use for it. / Optional – Umwege oder andere Plugins.

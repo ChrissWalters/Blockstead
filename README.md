@@ -1,112 +1,129 @@
 # Blockstead
 
-**Dein eigenes Grundstück in der Stadt.** Blockstead ist ein CityBuild-Plugin für Minecraft-Server (Paper):
-Grundstücke kaufen, andere mit eigenen Rollen einladen, ein Zuhause setzen – und das Gebaute bleibt
-geschützt.
+**Your own plot in the city.** Blockstead is a CityBuild plugin for Minecraft servers (Paper): buy plots,
+invite others with their own roles, set a home – and what you build stays protected.
 
-Diese Seite erklärt das Plugin für **Spielende**. Für Serverbetreibende und das Team:
-[docs/admin.md](docs/admin.md). Für die Entwicklung: [docs/development.md](docs/development.md).
-Was sich zwischen den Versionen geändert hat: [CHANGELOG.md](CHANGELOG.md).
+*Auf Deutsch: [README.de.md](README.de.md)*
 
-## So funktioniert's
+This page explains the plugin for **players**. For server owners and staff: [docs/admin.md](docs/admin.md).
+For development: [docs/development.md](docs/development.md). What changed between versions:
+[CHANGELOG.md](CHANGELOG.md).
 
-Das Server-Team legt Grundstücke an – vom tiefsten bis zum höchsten Punkt der Welt. Freie Grundstücke
-kannst du mit der Server-Währung kaufen; zum Start hast du in der Regel genug Guthaben für **ein
-Grundstück**. Dein Guthaben zeigt der Befehl deines Servers, meist `/balance`. Weitere Grundstücke vergibt
-das Team.
+Blockstead speaks the language of your Minecraft client – English and German are included, more can be
+added (see [Translating](#translating)).
 
-Auf deinem Grundstück darf niemand etwas anfassen, dem du keine Rolle gegeben hast – auch keine Türen
-öffnen. Beim Betreten und Verlassen eines Grundstücks siehst du, wo du bist.
+## How it works
 
-## Befehle
+The server team creates plots – from the lowest to the highest point of the world. You can buy free plots
+with the server currency; at the start you usually have enough money for **one plot**. Your balance is
+shown by your server's command, usually `/balance`. The team gives out further plots.
 
-`[ID]` kannst du weglassen – dann gilt das Grundstück, auf dem du gerade stehst. Grundstücks-IDs sehen so
-aus: `plot_3`. Alle Befehle haben Tab-Vervollständigung.
+Nobody can touch anything on your plot unless you have given them a role – not even open doors. When you
+enter or leave a plot, you see where you are.
 
-| Befehl | Was er tut |
+## Commands
+
+You can leave out `[ID]` – then the plot you are standing on is used. Plot IDs look like this: `plot_3`.
+All commands have tab completion.
+
+| Command | What it does |
 |---|---|
-| `/plot` | Übersicht aller Befehle, die du nutzen darfst |
-| `/plot info [ID]` | Wem gehört das Grundstück, wer hat welche Rolle, ist es frei? |
-| `/plot claim [ID]` | Freies Grundstück kaufen |
-| `/plot list` | Deine Grundstücke |
-| `/plot home` | Zu deinem Zuhause teleportieren |
-| `/plot home set` | Dein Zuhause hier setzen (auf deinem Grundstück oder mit passender Rolle) |
-| `/plot trust <Name> <Rolle> [ID]` | Jemandem eine Rolle auf deinem Grundstück geben |
-| `/plot untrust <Name> [ID]` | Rolle wieder wegnehmen |
-| `/plot unclaim [ID]` | Grundstück zurückgeben – du bekommst den Kaufpreis zurück, alles Gebaute bleibt stehen |
-| `/plot unclaim [ID] reset` | Zurückgeben **und** auf den Ursprungszustand zurücksetzen (mit Sicherheitsabfrage) |
-| `/blockstead` | Version, Lizenz und Quellcode des Plugins |
+| `/plot` | Overview of all commands you may use |
+| `/plot info [ID]` | Who owns the plot, who has which role, is it free? |
+| `/plot claim [ID]` | Buy a free plot |
+| `/plot list` | Your plots |
+| `/plot home` | Teleport to your home |
+| `/plot home set` | Set your home here (on your plot or with a suitable role) |
+| `/plot trust <name> <role> [ID]` | Give someone a role on your plot |
+| `/plot untrust <name> [ID]` | Take the role away again |
+| `/plot unclaim [ID]` | Give the plot back – you get the price back, everything you built stays |
+| `/plot unclaim [ID] reset` | Give it back **and** restore its original state (asks for confirmation) |
+| `/blockstead` | Version, licence and source code of the plugin |
 
-Was davon du nutzen darfst, legt der Server fest – Befehle ohne Berechtigung werden dir gar nicht erst
-angezeigt.
+What you may use is decided by the server – commands you have no permission for aren't shown at all.
 
-## Rollen
+## Roles
 
-Mit `/plot trust <Name> <Rolle>` lädst du andere auf dein Grundstück ein. So sind die Rollen
-voreingestellt – dein Server kann sie anpassen, `/plot info` zeigt, wer welche Rolle hat:
+With `/plot trust <name> <role>` you invite others to your plot. These are the default roles – your server
+can change them, `/plot info` shows who has which role:
 
-| | Besitzende | Mitbewohnende | Bauhilfe | Gast |
+| | Owner | Resident | Builder | Guest |
 |---|:-:|:-:|:-:|:-:|
-| Bauen und Abbauen | ✔ | ✔ | ✔ | |
-| Truhen und andere Behälter | ✔ | ✔ | | |
-| Türen, Tore, Knöpfe, Hebel | ✔ | ✔ | ✔ | ✔ |
-| Werkbank, Öfen, Amboss, Betten | ✔ | ✔ | ✔ | |
-| Tiere, Rüstungsständer, Rahmen | ✔ | ✔ | | |
-| Zuhause setzen | ✔ | ✔ | | |
-| Rollen vergeben, Grundstück zurückgeben | ✔ | | | |
+| Build and break | ✔ | ✔ | ✔ | |
+| Chests and other containers | ✔ | ✔ | | |
+| Doors, gates, buttons, levers | ✔ | ✔ | ✔ | ✔ |
+| Crafting table, furnaces, anvil, beds | ✔ | ✔ | ✔ | |
+| Animals, armor stands, item frames | ✔ | ✔ | | |
+| Set a home | ✔ | ✔ | | |
+| Give roles, give the plot back | ✔ | | | |
 
-Die Rollennamen im Befehl: `besitzende`, `mitbewohnende`, `bauhilfe`, `gast`.
+The role names in the command: `owner`, `resident`, `builder`, `guest`. The German names from earlier
+versions (`besitzende`, `mitbewohnende`, `bauhilfe`, `gast`) still work.
 
-Gut zu wissen:
+Good to know:
 
-* **Besitzende sind gleichberechtigt.** Wer `besitzende` wird, kann alles, was du kannst – auch dir Rechte
-  entziehen oder das Grundstück zurückgeben. Vergib diese Rolle nur an Menschen, denen du vertraust. Die
-  letzte besitzende Person kann nicht entfernt werden.
-* **Zurückgeben:** Den Kaufpreis bekommt immer die Person zurück, die das Grundstück gekauft hat. Alle
-  Rollen und Zuhause auf dem Grundstück werden dabei entfernt. Zurücksetzen (`reset`) geht nur alle paar
-  Minuten.
-* **Zuhause:** Verlierst du die Rechte auf einem Grundstück, gilt dein Zuhause dort nicht mehr.
+* **Owners are equals.** Whoever becomes `owner` can do everything you can – including taking your rights
+  away or giving the plot back. Only give this role to people you trust. The last owner can't be removed.
+* **Giving back:** The price always goes back to the person who bought the plot. All roles and homes on the
+  plot are removed. Restoring (`reset`) is only possible every few minutes.
+* **Home:** If you lose your rights on a plot, your home there is no longer valid.
 
-## Issues ja, Pull Requests nein
+## Issues yes, pull requests only for translations
 
-**Fehlermeldungen, Fragen und Ideen sind sehr willkommen – bitte als
-[Issue](https://github.com/ChrissWalters/Blockstead/issues).** Das ist der eine Kanal, und er wird
-gelesen: Woran Leute hängenbleiben, wird behoben.
+**Bug reports, questions and ideas are very welcome – please open an
+[issue](https://github.com/ChrissWalters/Blockstead/issues).** That is the one channel, and it is read: what
+people run into is what gets fixed.
 
-**Pull Requests werden nicht angenommen**, und das gehört vorher gesagt, nicht hinterher. Dies ist ein
-Ein-Personen-Projekt; fremden Code so gründlich zu prüfen, dass ich für das geradestehen kann, was auf
-anderen Servern läuft, ist ein Zeitaufwand, den ich derzeit nicht aufbringen kann. Eine fertige Arbeit
-abzulehnen wäre unhöflicher als dieser Absatz.
+**Pull requests are only accepted for translations** – that is, changes to files in
+[`src/main/resources/lang/`](src/main/resources/lang/). Translations need no code review, so they are easy
+to take. Pull requests that touch anything else are closed automatically by a check, and it is friendlier to
+say so before you spend an evening on one. This is a single-maintainer project; reviewing other people's
+code well enough to be sure of what runs on other servers is a time commitment I can't make right now.
 
-Was du mit der Software machen darfst, schränkt das nicht ein. Sie steht unter der AGPL-3.0: abspalten,
-ändern, die geänderte Fassung betreiben, weitergeben. Die Lizenz verlangt nur, dass deine Fassung unter
-denselben Bedingungen bleibt und die Vermerke erhalten bleiben.
+Nothing about that limits what you may do with the software. It is AGPL-3.0: fork it, change it, run your
+changed version, pass it on. The licence only asks that your version stays under the same terms and keeps
+the notices intact.
 
-Wenn du in deiner Abspaltung etwas repariert hast, ist ein Issue mit Beschreibung – oder mit Link auf
-deinen Commit – wirklich hilfreich. Es nimmt nur den Weg über mich statt über einen Merge-Knopf.
+If you have fixed something in your fork, an issue describing it – or linking to your commit – is genuinely
+useful. It just travels back through me rather than through a merge button.
 
-Sicherheitsprobleme bitte nicht als öffentliches Issue melden, sondern wie in [SECURITY.md](SECURITY.md)
-beschrieben.
+Please report security problems privately, not as a public issue – see [SECURITY.md](SECURITY.md).
 
-## Projekt unterstützen
+## Translating
 
-Blockstead ist kostenlos und bleibt es: keine Bezahlversion, kein Lizenzschlüssel, keine zurückgehaltenen
-Funktionen. Wenn dir das Plugin gefällt und du Danke sagen möchtest:
+Every text lives in a flat YAML file under [`src/main/resources/lang/`](src/main/resources/lang/), keyed like
+`plot.claim.success`. Adding a language:
+
+1. Copy `en.yml` to `<code>.yml` – a language code as Minecraft uses it, e.g. `fr` (or `pt_br` for a
+   regional variant).
+2. Translate the texts. Leave the keys alone and keep every placeholder such as `<id>` or `<name>` exactly as
+   it is. Formatting tags like `<gold>` or `<bold>` may be changed.
+3. Try it on a server: put the file into `plugins/Blockstead/lang/` and restart – no rebuild needed. Players
+   whose Minecraft client uses that language see it right away.
+4. **To get it shipped with the next release, open a pull request** that only adds or changes the file in
+   `src/main/resources/lang/`. Please say how you would like to be credited, or that you would rather not be.
+
+The build checks that every language file has the same keys and placeholders as `en.yml`, so a typo in a key
+doesn't get far.
+
+## Supporting the project
+
+Blockstead is free and stays free: no paid tier, no licence key, no feature held back. If you like the
+plugin and would like to say thank you:
 
 * [Ko-fi](https://ko-fi.com/chrisswalters)
 
-Völlig freiwillig, und nichts an der Software hängt davon ab.
+Entirely voluntary, and nothing about the software depends on it.
 
-## Entwicklung
+## Development
 
-KI-Werkzeuge wurden und werden zur Unterstützung der Entwicklung von Blockstead eingesetzt.
+AI coding tools were and are used to support the development of Blockstead.
 
-## Lizenz
+## Licence
 
 Copyright © 2026 ChrissWalters
 
-[GNU Affero General Public License v3.0 oder später](LICENSE). Bereitgestellt **ohne jede Gewährleistung**.
+[GNU Affero General Public License v3.0 or later](LICENSE). Provided **without any warranty**.
 
-Wer eine veränderte Fassung auf einem Server betreibt, muss den Spielenden den Quellcode anbieten – am
-einfachsten, indem `website` in der `plugin.yml` auf das eigene Repository zeigt; `/blockstead` zeigt den
-Link an.
+Whoever runs a modified version on a server must offer the players its source code – easiest by setting
+`website` in `plugin.yml` to your own repository; `/blockstead` shows the link.

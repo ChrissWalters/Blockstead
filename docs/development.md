@@ -1,89 +1,105 @@
-# Blockstead – Entwicklung
+# Blockstead – Development
 
-Pull Requests werden nicht angenommen (siehe [README](../README.md#issues-ja-pull-requests-nein)); diese
-Seite ist für alle, die an einer eigenen Kopie arbeiten. Offene Punkte, Erkenntnisse und Stolperfallen:
-[notes.md](notes.md).
+Pull requests are only accepted for translations (see the [README](../README.md#issues-yes-pull-requests-only-for-translations));
+this page is for everyone working on their own copy. Open points, findings and pitfalls: [notes.md](notes.md).
 
-## Einrichtung (VSCodium / VS Code)
+## Setup (VSCodium / VS Code)
 
-1. JDK 25 installieren (über den Paketmanager des Systems oder von https://adoptium.net). Ohne lokales JDK
-   lädt Gradle beim Bauen selbst eins herunter, die Java-Erweiterung im Editor braucht aber ein installiertes.
-2. Projektordner öffnen und die vorgeschlagenen Erweiterungen installieren (`.vscode/extensions.json`):
-   Language Support for Java, Debugger for Java, Gradle for Java, YAML.
+1. Install JDK 25 (from your system's package manager or https://adoptium.net). Without a local JDK, Gradle
+   downloads one itself when building, but the Java extension in the editor needs an installed one.
+2. Open the project folder and install the suggested extensions (`.vscode/extensions.json`): Language Support
+   for Java, Debugger for Java, Gradle for Java, YAML.
 
-## Bauen
+## Building
 
 ```sh
 ./gradlew build
 ```
 
-Ergebnis: `build/libs/blockstead-<Version>.jar`. Alle Abhängigkeiten (Paper-API, WorldEdit, WorldGuard,
-LuckPerms-API, VaultAPI) sind `compileOnly` – der Server stellt sie bereit, in der Jar steckt nur Blockstead
-selbst. Die VaultAPI kommt über JitPack (`com.github.MilkBowl:VaultAPI`) mit `transitive = false`, weil sie
-sonst eine alte Bukkit-API mitzieht, die mit der Paper-API kollidiert.
+Result: `build/libs/blockstead-<version>.jar`. All dependencies (Paper API, WorldEdit, WorldGuard, LuckPerms
+API, VaultAPI) are `compileOnly` – the server provides them, the jar contains only Blockstead itself. The
+VaultAPI comes from JitPack (`com.github.MilkBowl:VaultAPI`) with `transitive = false`, because it would
+otherwise pull in an old Bukkit API that clashes with the Paper API.
 
-## Lokaler Testserver
+`./gradlew build` also runs `checkLanguageFiles`: every file in `src/main/resources/lang/` must have the same
+keys and placeholders as `en.yml`.
+
+## Local test server
 
 ```sh
 ./gradlew runServer
 ```
 
-Startet einen Paper-26.3-Server im Ordner `run/` mit dem Plugin sowie WorldEdit, WorldGuard, LuckPerms und
-Vault. EssentialsX gibt es für 26.3 nur als Dev-Build ohne feste Download-Adresse
-(https://essentialsx.net/downloads.html?branch=dev) – `EssentialsX-*.jar` (und für `/spawn`
-`EssentialsXSpawn-*.jar`) bei Bedarf von Hand nach `run/plugins/` legen. Beim ersten Start in `run/eula.txt` `eula=true` setzen und erneut starten. Verbinden mit
-`localhost`.
+Starts a Paper 26.3 server in the `run/` folder with the plugin plus WorldEdit, WorldGuard, LuckPerms and
+Vault. EssentialsX for 26.3 only exists as a dev build without a fixed download address
+(https://essentialsx.net/downloads.html?branch=dev) – put `EssentialsX-*.jar` (and `EssentialsXSpawn-*.jar`
+for `/spawn`) into `run/plugins/` by hand if needed. On first start, set `eula=true` in `run/eula.txt` and
+start again. Connect to `localhost`.
 
-Nicht bauen, während der Testserver läuft – das ersetzt die Jar unter dem laufenden Server.
+Don't build while the test server is running – that replaces the jar underneath the running server.
 
-**Debuggen:** `./gradlew runServer --debug-jvm` starten (wartet auf den Debugger), dann in VSCodium unter
-„Run and Debug“ **„Attach to test server“** wählen. Breakpoints im Code halten dann an.
+**Debugging:** start `./gradlew runServer --debug-jvm` (it waits for the debugger), then choose
+**"Attach to test server"** under "Run and Debug" in VSCodium. Breakpoints in the code then stop.
 
 ## Release
 
-Die GitHub Action baut bei jedem Push und Pull Request und hängt die Jar als Artefakt an. Ein Tag `v*`
-(z.B. `git tag v2.0.0 && git push origin v2.0.0`) erzeugt ein GitHub-Release mit der Jar; der Release-Text
-ist der Abschnitt `## <Version>` aus [CHANGELOG.md](../CHANGELOG.md). Vorher die Version in `build.gradle`
-setzen und den CHANGELOG ergänzen.
+The GitHub Action builds on every push and pull request and attaches the jar as an artifact. A tag `v*`
+(e.g. `git tag v2.1.0 && git push origin v2.1.0`) creates a GitHub release with the jar; the release text is
+the section `## <version>` from [CHANGELOG.md](../CHANGELOG.md) (English) followed by the same section from
+[CHANGELOG.de.md](../CHANGELOG.de.md) (German). Before that, set the version in `build.gradle` and add the
+entry to both changelogs. New features and planned versions are developed in their own branch (e.g.
+`release/2.1.0`) and merged into `main` after testing.
 
-### Versionierung
+Pull requests are checked by a separate job: they may only change files in `src/main/resources/lang/`.
 
-[Semantic Versioning 2.0.0](https://semver.org/lang/de/), Schema `MAJOR.MINOR.PATCH`:
+### Versioning
 
-* **Major:** nicht rückwärtskompatible Änderungen an der öffentlichen Schnittstelle. Dazu zählen Befehle und
-  ihre Syntax, Rechte (`bs.*`), Einträge der `config.yml`, das Datenformat (`data.db` – auch wenn nur der Weg
-  zurück auf die Vorversion nicht mehr geht) und Pflicht-Abhängigkeiten.
-* **Minor:** neue Funktionen, rückwärtskompatibel.
-* **Patch:** nur Fehlerbehebungen.
-* Vorabversionen mit Bindestrich, z.B. `2.0.0-rc.1`.
+[Semantic Versioning 2.0.0](https://semver.org), scheme `MAJOR.MINOR.PATCH`:
 
-## Projektstruktur
+* **Major:** changes to the public interface that are not backwards compatible. These include commands and
+  their syntax, permissions (`bs.*`), `config.yml` entries, the data format (`data.db` – even if only the way
+  back to the previous version no longer works) and required dependencies.
+* **Minor:** new features, backwards compatible.
+* **Patch:** bug fixes only.
+* Pre-releases with a hyphen, e.g. `2.0.0-rc.1`.
+
+## Project structure
 
 ```
 src/main/java/com/github/chrisswalters/blockstead/
-├── Blockstead.java    Hauptklasse: Start, Abhängigkeiten, Registrierung von Befehlen und Listenern
-├── commands/          Befehle (Paper-Brigadier)
-├── config/            Einlesen der config.yml
-├── display/           LuckPerms-Präfixe in Chat, Tab-Liste und Nametag (nur mit LuckPerms geladen)
-├── economy/           Anbindung der Server-Währung über Vault, Übertragung alter Kontostände
-├── listeners/         Event-Listener (Join, Quit, Bewegung, Schutz der Rollen)
-├── players/           Laufzeitdaten pro Person, die online ist
-├── plots/             Grundstücke anlegen, kaufen, zuweisen, freigeben, löschen, zurücksetzen
-├── roles/             Rollen und Rechte auf Grundstücken
-├── storage/           SQLite-Datenbank, Schema-Migrationen, Sicherungen
-└── util/              Hilfsmethoden (WorldGuard, Namen, Textformat, Versionen)
+├── Blockstead.java    Main class: startup, dependencies, registering commands and listeners
+├── commands/          Commands (Paper Brigadier)
+├── config/            Reading config.yml
+├── display/           LuckPerms prefixes in chat, tab list and nametag (only loaded with LuckPerms)
+├── economy/           Server currency through Vault, transfer of old balances
+├── lang/              Language files and translated messages (Messages)
+├── listeners/         Event listeners (join, quit, movement, protection of roles)
+├── players/           Runtime data per person who is online
+├── plots/             Creating, buying, assigning, releasing, deleting, restoring plots
+├── roles/             Roles and rights on plots
+├── storage/           SQLite database, schema migrations, backups
+└── util/              Helpers (WorldGuard, names, text format, versions)
+src/main/resources/
+├── config.yml         Template of the configuration
+├── lang/              Bundled language files (en.yml, de.yml)
+└── plugin.yml
 ```
 
-## Konventionen
+## Conventions
 
-* **Sprache:** Nachrichten, Javadoc, Kommentare und Doku auf Deutsch, mit echten Umlauten (UTF-8).
-* **Gendergerecht:** neutrale Formen („Spielende“, „Besitzende“, „Person“), wo nicht möglich Genderstern
-  („Spieler*innen“) – nie das generische Maskulinum.
-* **Javadoc** für jede Klasse und jede nicht-triviale Methode.
-* **Datenbank:** Schema-Änderungen nur als neuer Block in `Database.migrate()`, dabei
-  `Database.SCHEMA_VERSION` erhöhen; alte Blöcke nie ändern.
-* **LuckPerms-Typen** nur im Paket `display` – LuckPerms ist optional.
-* **Vault-Typen** nur in `economy/VaultEconomy` – Vault ist optional; `EconomyService` prüft vorher per
-  `Class.forName`, ob Vault da ist.
-* **Texte mit Formatierung** (`TextFormat`) nur aus vertrauenswürdigen Quellen (config.yml, Team-Befehle),
-  nie aus dem Chat von Spielenden.
+* **Language:** Javadoc and code comments in German (with real umlauts, UTF-8); log messages, `config.yml`
+  comments and this documentation (except README/admin, which also exist in German) in English. Texts for
+  players and staff only in language files, never hard-coded – send them with `Messages.send(...)`.
+* **Gender-fair German:** neutral forms ("Spielende", "Besitzende", "Person"), otherwise the gender star
+  ("Spieler*innen") – never the generic masculine.
+* **Javadoc** for every class and every non-trivial method.
+* **Placeholders** in language files are tags like `<id>`; their values are passed with `Messages.arg(...)` and
+  are never parsed as formatting.
+* **Database:** schema changes only as a new block in `Database.migrate()`, raising
+  `Database.SCHEMA_VERSION`; never change old blocks.
+* **LuckPerms types** only in the `display` package – LuckPerms is optional.
+* **Vault types** only in `economy/VaultEconomy` – Vault is optional; `EconomyService` checks with
+  `Class.forName` whether Vault is present.
+* **Formatted text** (`TextFormat`) only from trusted sources (language files, config.yml, staff commands),
+  never from players' chat.
+* **Commands** stay English; argument names (`<world>`, `<role>`) too.

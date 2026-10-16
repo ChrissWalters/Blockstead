@@ -1,44 +1,44 @@
-# Sicherheitsrichtlinie
+# Security policy
 
-Blockstead läuft auf Minecraft-Servern und verwaltet Grundstücke und Rechte und bucht Käufe über die
-Server-Währung. Fehler
-dort können Bauwerke ungeschützt lassen oder Spielenden Rechte geben, die sie nicht haben sollten.
+Blockstead runs on Minecraft servers, manages plots and permissions and books purchases through the server
+currency. Bugs there can leave buildings unprotected or give players rights they shouldn't have.
 
-## Eine Schwachstelle melden
+## Reporting a vulnerability
 
-Sicherheitsprobleme bitte **zuerst vertraulich** melden, nicht als öffentliches Issue:
+Please report security problems **privately first**, not as a public issue:
 
-* GitHub → *Security* → *Report a vulnerability* (privater Hinweis), oder
-* per E-Mail an die Adresse im Profil des Repositorys.
+* GitHub → *Security* → *Report a vulnerability* (private advisory), or
+* by e-mail to the address in the repository profile.
 
-Hilfreich sind: was du getan hast, was passiert ist, was du erwartet hast, und die Version (`/blockstead`
-zeigt sie an). Ein nachvollziehbares Beispiel hilft, ein fertiger Exploit ist nicht nötig.
+Useful in a report: what you did, what happened, what you expected, and the version (`/blockstead` shows it).
+A reproducible example helps, a working exploit is not required. Reports in German are welcome, too.
 
-Eine erste Antwort kommt innerhalb von **sieben Tagen**. Behobene Probleme werden in den Versionshinweisen
-genannt – und, wenn du nichts dagegen hast, du mit ihnen.
+You will get a first answer within **seven days**. Fixed problems are named in the release notes – and,
+unless you would rather not be, you are credited there.
 
-Es gibt kein Bounty-Programm; dies ist ein freiwilliges Projekt unter der AGPL-3.0.
+There is no bounty programme; this is a volunteer project under the AGPL-3.0.
 
-## Was dazugehört
+## What is in scope
 
-Das Plugin selbst: Schutz der Grundstücke und Rollen, Rechteprüfung der Befehle, Buchungen beim Kaufen und Erstatten,
-Datenbank und Sicherungen, die Verarbeitung von Chat- und Konfigurationstexten.
+The plugin itself: protection of plots and roles, permission checks of the commands, bookings when buying and
+refunding, the database and backups, the handling of chat, configuration and language-file texts.
 
-Nicht dazu gehören: Probleme, die einen bereits kompromittierten Server voraussetzen, Fehler in Paper,
-WorldEdit, WorldGuard oder LuckPerms selbst (bitte dort melden) sowie Rechte, die das Server-Team bewusst
-vergeben hat.
+Out of scope: problems that require an already compromised server, bugs in Paper, WorldEdit, WorldGuard,
+LuckPerms, Vault or EssentialsX themselves (please report them there), and rights the server team granted on
+purpose.
 
-## Wie sich das Plugin schützt
+## How the plugin protects itself
 
-| Bereich | Maßnahme |
+| Area | Measure |
 |---|---|
-| Grundstücke | WorldGuard sperrt Fremde aus; Rollen schränken Mitglieder zusätzlich ein, nie umgekehrt |
-| Befehle | Jeder Unterbefehl prüft sein Recht; ohne Recht wird er gar nicht angezeigt |
-| Chat | Nachrichten von Spielenden werden nie als Formatierung gelesen (keine Farb-, Klick- oder Hover-Codes); in Team-Texten (`/announce`, `join-info`) sind Klicks, die Befehle ausführen, gesperrt |
-| Datenbank | Ausschließlich vorbereitete SQL-Statements |
-| Währung | Abbuchung vor der Vergabe des Grundstücks; Buchungen über das Economy-Plugin, fehlgeschlagene Erstattungen im Log |
-| Dateien | Namen von Sicherungsdateien werden auf sichere Zeichen reduziert |
-| Serverlast | Wartezeit zwischen zwei Zurücksetzungen durch Spielende |
-| Build | Die Pipeline läuft mit Leserecht; nur der Release-Job bei Versions-Tags darf schreiben |
-| Updates | Sicherung von Datenbank und Regionen bei jedem Start; kein Start mit einer neueren Datenbank |
-| Datenschutz | Keine Telemetrie, keine Verbindungen nach außen |
+| Plots | WorldGuard keeps strangers out; roles additionally restrict members, never the other way round |
+| Commands | Every subcommand checks its permission; without it, it isn't even shown |
+| Chat | Players' messages are never parsed as formatting (no colour, click or hover codes); in staff texts (`/announce`, `join-info`, language files) clicks that run commands are blocked |
+| Placeholders | Values inserted into translated texts (names, IDs …) are never parsed as formatting |
+| Database | Prepared SQL statements only |
+| Currency | Payment before the plot is given out; bookings through the economy plugin, failed refunds in the log |
+| Files | Names of snapshot files are reduced to safe characters |
+| Server load | Waiting time between two restores by players |
+| Build | The pipeline runs with read permission; only the release job for version tags may write. Pull requests may only change language files |
+| Updates | Backup of database and regions at every start; no start with a newer database |
+| Privacy | No telemetry, no outgoing connections |

@@ -1,183 +1,223 @@
-# Blockstead – Betrieb und Team
+# Blockstead – Running it and staff
 
-Diese Seite ist für Serverbetreibende und das Server-Team. Was Spielende wissen müssen, steht in der
+*Auf Deutsch: [admin.de.md](admin.de.md)*
+
+This page is for server owners and the server team. What players need to know is in the
 [README](../README.md).
 
-## Voraussetzungen
+## Requirements
 
-| Komponente | Version |
+| Component | Version |
 |---|---|
-| Paper | 26.3 oder neuer |
+| Paper | 26.3 or newer |
 | Java | 25 |
-| WorldEdit | 7.4.x (getestet mit 7.4.6) |
+| WorldEdit | 7.4.x (tested with 7.4.6) |
 | WorldGuard | 7.0.19 |
-| LuckPerms (optional) | 5.5.85 oder neuer – für Präfixe in Chat, Tab-Liste und über dem Kopf |
-| Vault oder VaultUnlocked (optional) | Vault 1.7.3 – nötig, damit Grundstücke **gekauft** werden können |
-| Economy-Plugin (optional) | z.B. EssentialsX – führt die Kontostände; für Paper 26.3 derzeit nur als Dev-Build (2.22.1-SNAPSHOT) |
+| LuckPerms (optional) | 5.5.85 or newer – for prefixes in chat, tab list and above the head |
+| Vault or VaultUnlocked (optional) | Vault 1.7.3 – needed so that plots can be **bought** |
+| Economy plugin (optional) | e.g. EssentialsX – keeps the balances; for Paper 26.3 currently only as a dev build (2.22.1-SNAPSHOT) |
 
-Ohne Vault bzw. Economy-Plugin läuft Blockstead weiter: `/plot claim` ist dann gesperrt (außer bei Preis 0),
-das Team kann Grundstücke mit `/plot assign` vergeben. Den Status zeigt eine Zeile im Log kurz nach dem Start
-(„Server-Währung über Vault: …“ bzw. eine Warnung).
+Without Vault or an economy plugin Blockstead keeps running: `/plot claim` is then blocked (unless the price
+is 0), staff can give out plots with `/plot assign`. A line in the log shortly after startup shows the status
+("Server currency through Vault: …" or a warning).
 
-**Aufgabenteilung:** Blockstead kümmert sich nur um Grundstücke (plus `/announce`, Login-Nachricht und
-LuckPerms-Präfixe). Allgemeine Befehle wie `/spawn`, `/balance`, `/pay`, `/god` oder `/suicide` und die
-Währung selbst kommen von EssentialsX (bzw. einem anderen Plugin).
+**Division of work:** Blockstead only takes care of plots (plus `/announce`, the join message and LuckPerms
+prefixes). General commands like `/spawn`, `/balance`, `/pay`, `/god` or `/suicide` and the currency itself
+come from EssentialsX (or another plugin).
 
 ## Installation
 
-1. `blockstead-<Version>.jar` aus einem [GitHub-Release](https://github.com/ChrissWalters/Blockstead/releases)
-   laden (oder selbst bauen, siehe [development.md](development.md)).
-2. Nach `plugins/` des Servers kopieren, Server neu starten.
-3. Beim ersten Start wird `plugins/Blockstead/config.yml` angelegt.
+1. Download `blockstead-<version>.jar` from a [GitHub release](https://github.com/ChrissWalters/Blockstead/releases)
+   (or build it yourself, see [development.md](development.md)).
+2. Copy it into the server's `plugins/` folder and restart the server.
+3. On first start, `plugins/Blockstead/config.yml` is created.
 
-## Update
+## Updating
 
-1. **Vorher ein komplettes Server-Backup machen** (Welten und `plugins/`).
-2. Die alte Jar aus `plugins/` entfernen, die neue hineinlegen, Server neu starten.
-3. Hinweise zur jeweiligen Version in [CHANGELOG.md](../CHANGELOG.md) lesen – insbesondere neue Einträge
-   der `config.yml`, die nicht automatisch ergänzt werden.
+1. **Make a complete server backup first** (worlds and `plugins/`).
+2. Remove the old jar from `plugins/`, put in the new one, restart the server.
+3. Read the notes for the version in [CHANGELOG.md](../CHANGELOG.md) – especially new `config.yml` entries,
+   which are not added automatically.
 
-### Von 1.x auf 2.0.0
+### From 2.0.x to 2.1.0
 
-Blockstead 2.0.0 gibt die eigene Währung und die allgemeinen Befehle ab:
+* **Languages:** all texts come from language files (see [Languages](#languages)). Without any change to
+  `config.yml`, every person gets the language of their Minecraft client and the console gets English. For a
+  German-only server: set `language: de` and `fallback-language: de` in `config.yml`.
+* **Log messages are English** (e.g. "Transfer finished: …" instead of "Übertragung abgeschlossen: …").
+* **Roles:** the new default keys are `owner`, `resident`, `builder`, `guest`. An existing `config.yml`
+  keeps its German keys – everything keeps working as before, `besitzende` is an alias of `owner`. To switch,
+  take the `roles` section from the new template ([`src/main/resources/config.yml`](../src/main/resources/config.yml));
+  its `aliases` keep stored roles with German keys valid. Without `name`, role names are shown translated.
+* **`region-name`:** `/plot create` no longer sets this flag. The message when entering comes translated from
+  the language file; old plots with the former default text "Du betrittst das Grundstück …" show the
+  translated message, too. Custom texts stay unchanged.
+* **`config.yml`:** new are `language` and `fallback-language`; the comments in the template are English.
 
-* **Entfernt:** `/coins`, `/spawn`, `/die` (`/suicide`), `/invincible` und die Rechte `bs.coins*`, `bs.spawn`,
-  `bs.die`, `bs.invincible*`; `/announce` hat keinen Alias `/broadcast` mehr. Ersatz bei EssentialsX:
-  `/balance`, `/pay`, `/eco`, `/baltop`, `/spawn`, `/setspawn`, `/suicide`, `/god` – Rechte dafür im
-  Economy- bzw. Rechte-Plugin vergeben (`essentials.*`).
-* **Vorher:** `/invincible` mit 1.0.1 bei allen ausschalten, die es benutzt haben. Die Unverwundbarkeit steht
-  in den Spieldaten und lässt sich ohne den Befehl nicht mehr abschalten (`/god` ist ein eigener Schalter).
-* **Kontostände:** Beim ersten Start mit Vault und Economy-Plugin überträgt Blockstead jedes alte Konto
-  einmal. Der Stand im Economy-Plugin wird auf den alten Wert **gesetzt**, nicht addiert. Im Log steht je
-  Konto eine Zeile und am Ende „Übertragung abgeschlossen: x von N Konto/Konten übertragen.“ Fehlgeschlagene
-  Konten werden beim nächsten Start erneut versucht. Mit `economy.import-old-balances: false` werden die alten
-  Stände nicht übertragen. EssentialsX kennt die Namen übertragener Konten erst, wenn die Person wieder online
-  war (`/baltop` zeigt bis dahin „null“). Auf Offline-Mode-Servern legt EssentialsX die Konten als NPC an –
-  dann fehlen sie in `/baltop`.
-* **Datenbank:** Schema-Version 4. Zurück auf 1.x geht nur über die Sicherung von `data.db` vor dem Update
-  (ältester Ordner vom Update-Tag unter `plugins/Blockstead/backups/`) – 1.x startet mit Schema 4 absichtlich nicht.
-* **`config.yml`:** `economy.currency-name` und `economy.start-balance` werden ignoriert (Name, Zeichen und
-  Startguthaben stellt man im Economy-Plugin ein). Neu ist `economy.import-old-balances` (Standard `true`).
+### From 1.x to 2.0.0
 
-Vom Vorgänger **„Buildserver“**: Die alte Jar (z.B. `buildserver-0.0.1-SNAPSHOT.jar`) muss entfernt werden – beide gleichzeitig
-würden sich gegenseitig stören. Rechte (`bs.*`) und WorldGuard-Regionen bleiben gleich; Details im
-[CHANGELOG](../CHANGELOG.md).
+Blockstead 2.0.0 hands over its own currency and the general commands:
 
-## Grundstücke anlegen
+* **Removed:** `/coins`, `/spawn`, `/die` (`/suicide`), `/invincible` and the permissions `bs.coins*`,
+  `bs.spawn`, `bs.die`, `bs.invincible*`; `/announce` no longer has the alias `/broadcast`. Replacements in
+  EssentialsX: `/balance`, `/pay`, `/eco`, `/baltop`, `/spawn`, `/setspawn`, `/suicide`, `/god` – give the
+  permissions for them in the economy or permissions plugin (`essentials.*`).
+* **Before:** turn `/invincible` off with 1.0.1 for everyone who used it. Invulnerability is stored in the
+  player data and can't be switched off without the command any more (`/god` is a separate switch).
+* **Balances:** on the first start with Vault and an economy plugin, Blockstead transfers every old account
+  once. The balance in the economy plugin is **set** to the old value, not added. The log shows one line per
+  account and finally "Transfer finished: x of N account(s) transferred." (German up to 2.0.1). Failed
+  accounts are retried at the next start. With `economy.import-old-balances: false` the old balances are not
+  transferred. EssentialsX only knows the names of transferred accounts once the person has been online again
+  (`/baltop` shows "null" until then). On offline-mode servers EssentialsX creates the accounts as NPCs – then
+  they are missing from `/baltop`.
+* **Database:** schema version 4. Going back to 1.x is only possible with the backup of `data.db` from before
+  the update (oldest folder of the update day under `plugins/Blockstead/backups/`) – 1.x refuses to start with
+  schema 4 on purpose.
+* **`config.yml`:** `economy.currency-name` and `economy.start-balance` are ignored (name, symbol and starting
+  balance are set in the economy plugin). New: `economy.import-old-balances` (default `true`).
 
-Grundstücke sind WorldGuard-Regionen mit der ID `plot_<Nummer>`:
+From the predecessor **"Buildserver"**: the old jar (e.g. `buildserver-0.0.1-SNAPSHOT.jar`) must be removed –
+both at the same time would get in each other's way. Permissions (`bs.*`) and WorldGuard regions stay the
+same; details in the [CHANGELOG](../CHANGELOG.md).
 
-1. Mit WorldEdit eine Fläche auswählen – Quader (`//wand`, zwei Punkte) oder Polygon (`//sel poly`).
-   Die Höhe spielt keine Rolle: Grundstücke reichen immer vom tiefsten bis zum höchsten Punkt der Welt.
-2. `/plot create` – legt das Grundstück mit den Standard-Flags aus der `config.yml` an und sichert seinen
-   Zustand (für das spätere Zurücksetzen).
+## Creating plots
 
-Neue Grundstücke haben keine Besitzenden. Spielende kaufen sie mit `/plot claim`, das Team vergibt sie
-mit `/plot assign`. Den Text beim Betreten setzt du mit der WorldGuard-Flag `region-name`, z.B.
-`/rg flag plot_3 region-name Willkommen bei Alex`.
+Plots are WorldGuard regions with the ID `plot_<number>`:
 
-### Überlappungen und Stadtbereiche
+1. Select an area with WorldEdit – a cuboid (`//wand`, two points) or a polygon (`//sel poly`). The height
+   doesn't matter: plots always reach from the lowest to the highest point of the world.
+2. `/plot create` – creates the plot with the default flags from `config.yml` and saves its state (for
+   restoring it later).
 
-* **Grundstücke dürfen sich nicht überlappen.** `/plot create` lehnt eine Auswahl ab, die ein bestehendes
-  Grundstück berührt.
-* **Andere Regionen dürfen Grundstücke überlappen** – z.B. eine Stadtregion mit Straßen dazwischen. Sie
-  brauchen dafür eine **niedrigere Priorität** als die Grundstücke (Standard 10, `plots.priority`), am
-  einfachsten 0: Dann gelten auf den Grundstücken deren Besitzende, Rollen und Flags, auf den Straßen die
-  Regeln der Stadtregion. Bei gleicher oder höherer Priorität überstimmt die Stadtregion die Grundstücke –
-  `/plot create` warnt dann, Priorität ändern mit `/rg setpriority <ID> 0`.
-* Grundstücke **nicht** per `/rg setparent` unter eine Stadtregion hängen: Kinder erben in WorldGuard die
-  Mitglieder der Eltern-Region – alle Mitglieder der Stadt dürften dann auf jedem Grundstück bauen.
-* Beim Start meldet die Konsistenzprüfung überlappende Grundstücke und Regionen mit zu hoher Priorität im
-  Log (ohne etwas zu ändern).
+New plots have no owners. Players buy them with `/plot claim`, staff give them out with `/plot assign`. When
+entering, the translated default message is shown; you set a custom text with the WorldGuard flag
+`region-name`, e.g. `/rg flag plot_3 region-name Welcome to Alex's place` (it then applies to all languages).
 
-## Team-Befehle
+### Overlaps and city areas
 
-`[ID]` weglassen = das Grundstück, auf dem man steht. `[Welt]` ist im Spiel optional (Standard: eigene
-Welt) und **aus der Server-Konsole Pflicht**, z.B. `plot assign plot_3 Alex world`.
+* **Plots must not overlap.** `/plot create` refuses a selection that touches an existing plot.
+* **Other regions may overlap plots** – e.g. a city region with streets in between. They need a **lower
+  priority** than the plots (default 10, `plots.priority`), simplest is 0: then the owners, roles and flags of
+  the plots apply on the plots and the city region's rules on the streets. With the same or a higher priority
+  the city region overrides the plots – `/plot create` then warns; change the priority with
+  `/rg setpriority <ID> 0`.
+* **Don't** put plots under a city region with `/rg setparent`: in WorldGuard, children inherit the members of
+  the parent region – every member of the city could then build on every plot.
+* At startup, the consistency check reports overlapping plots and regions with a too high priority in the log
+  (without changing anything).
 
-| Befehl | Beschreibung | Recht |
+## Staff commands
+
+Leave out `[ID]` = the plot you are standing on. `[World]` is optional in the game (default: your own world)
+and **required from the server console**, e.g. `plot assign plot_3 Alex world`.
+
+| Command | Description | Permission |
 |---|---|---|
-| `/plot create` | Grundstück aus der WorldEdit-Auswahl anlegen (nur im Spiel) | `bs.plot.create` |
-| `/plot remove <ID> [Welt] [reset]` | Grundstück löschen; Kaufpreis wird erstattet | `bs.plot.remove` |
-| `/plot assign <ID> <Name> [Welt]` | Freies Grundstück kostenlos zuweisen (auch an Personen, die offline sind) | `bs.plot.assign` |
-| `/plot unassign <ID> [Welt] [reset]` | Beliebiges Grundstück freigeben; Kaufpreis wird erstattet | `bs.plot.unassign` |
-| `/plot reset [ID] [Welt]` | Auf die Sicherung zurücksetzen, Besitz und Rollen bleiben | `bs.plot.reset` |
-| `/plot snapshot <ID> [Welt]` | Aktuellen Zustand als Sicherung zum Zurücksetzen speichern | `bs.plot.snapshot` |
-| `/plot tp <ID> [Welt]`, `/plot teleport …` | Zu einem Grundstück teleportieren – möglichst mittig (Abstand zum Rand, nahe dem Flächenschwerpunkt) und nie auf Lava, Feuer o.Ä. (nur im Spiel) | `bs.plot.tp` |
-| `/plot list <Name>` | Grundstücke einer anderen Person | `bs.plot.list.others` |
-| `/plot trust`, `/plot untrust` auf fremden Grundstücken | Rollen verwalten wie Besitzende | `bs.plot.trust.others` |
-| – | Wird von Grundstücks-Rollen nicht eingeschränkt | `bs.plot.bypass` |
-| `/announce <Nachricht>` | Auffällige Server-Nachricht an alle (Chat, Einblendung, Ton) | `bs.announce` |
+| `/plot create` | Create a plot from the WorldEdit selection (in the game only) | `bs.plot.create` |
+| `/plot remove <ID> [World] [reset]` | Delete a plot; the price is refunded | `bs.plot.remove` |
+| `/plot assign <ID> <Name> [World]` | Give a free plot to someone at no cost (also to people who are offline) | `bs.plot.assign` |
+| `/plot unassign <ID> [World] [reset]` | Release any plot; the price is refunded | `bs.plot.unassign` |
+| `/plot reset [ID] [World]` | Restore from the snapshot, ownership and roles stay | `bs.plot.reset` |
+| `/plot snapshot <ID> [World]` | Save the current state as the reset snapshot | `bs.plot.snapshot` |
+| `/plot tp <ID> [World]`, `/plot teleport …` | Teleport to a plot – as central as possible (distance to the edge, close to the centroid) and never onto lava, fire or similar (in the game only) | `bs.plot.tp` |
+| `/plot list <Name>` | Plots of another person | `bs.plot.list.others` |
+| `/plot trust`, `/plot untrust` on other people's plots | Manage roles like an owner | `bs.plot.trust.others` |
+| – | Not restricted by plot roles | `bs.plot.bypass` |
+| `/announce <message>` | Highlighted server message to everyone (chat, title, sound) | `bs.announce` |
 
-**Zurücksetzen:** `reset` stellt den Zustand beim Anlegen (oder beim letzten `/plot snapshot`) wieder her –
-exakt in der Grundstücksform, Nachbargrundstücke bleiben unberührt; Tiere, Rahmen und Rüstungsständer auf
-dem Grundstück werden entfernt. Unwiderrufliche Aktionen fragen nach: denselben Befehl innerhalb von 30
-Sekunden wiederholen. Ohne Sicherung (Grundstücke von vor Version 1.0.0) wird `reset` abgelehnt und nichts
-geändert. Zurücksetzen läuft im Hauptthread – bei großen Grundstücken kann der Server kurz stocken.
+**Restoring:** `reset` brings back the state at creation (or at the last `/plot snapshot`) – exactly in the
+shape of the plot, neighbouring plots stay untouched; animals, item frames and armor stands on the plot are
+removed. Irreversible actions ask for confirmation: repeat the same command within 30 seconds. Without a
+snapshot (plots from before version 1.0.0), `reset` is refused and nothing changes. Restoring runs on the
+main thread – with large plots the server may stall briefly.
 
-**Aus der Konsole** gehen `info`, `trust`, `untrust`, `remove`, `assign`, `unassign`, `reset`, `snapshot`,
-`list <Name>` und `/announce`.
+**From the console** you can use `info`, `trust`, `untrust`, `remove`, `assign`, `unassign`, `reset`,
+`snapshot`, `list <Name>` and `/announce`.
 
-**Erstattungen:** Beim Freigeben oder Löschen geht der Kaufpreis über das Economy-Plugin an die Person, die
-bezahlt hat. Kann das nicht gebucht werden (z.B. Economy-Plugin fehlt), wird das Grundstück trotzdem
-freigegeben; im Log steht dann ein Fehler „Erstattung fehlgeschlagen: …“ mit Name, UUID, Betrag und dem
-Hinweis, von Hand zu erstatten (z.B. `/eco give <Name> <Betrag>`).
+**Refunds:** when a plot is released or deleted, the price goes back through the economy plugin to the person
+who paid. If that can't be booked (e.g. the economy plugin is missing), the plot is released anyway; the log
+then shows an error "Refund failed: …" with name, UUID, amount and a note to refund manually
+(e.g. `/eco give <Name> <amount>`).
 
-## Rechte
+## Permissions
 
-Alle Rechte beginnen mit `bs.`. „Alle“ = alle Spielenden; „Op“ = Ops und die Konsole automatisch, alle
-anderen über LuckPerms, z.B. `lp group team permission set bs.plot.assign true`.
+All permissions start with `bs.`. "Everyone" = all players; "Op" = ops and the console automatically, everyone
+else through LuckPerms, e.g. `lp group team permission set bs.plot.assign true`.
 
-| Recht | Standard | Wofür |
+| Permission | Default | For |
 |---|---|---|
-| `bs.plot` | alle | `/plot`, `/plot info`, `/plot list` |
-| `bs.plot.claim` | alle | Grundstück kaufen |
-| `bs.plot.unclaim` | alle | Eigenes Grundstück zurückgeben |
-| `bs.plot.home` | alle | Zuhause setzen und hinteleportieren |
-| `bs.plot.trust` | alle | Rollen auf eigenen Grundstücken vergeben |
-| alle übrigen `bs.*` | Op | siehe Team-Befehle |
+| `bs.plot` | everyone | `/plot`, `/plot info`, `/plot list` |
+| `bs.plot.claim` | everyone | Buying a plot |
+| `bs.plot.unclaim` | everyone | Giving your own plot back |
+| `bs.plot.home` | everyone | Setting a home and teleporting there |
+| `bs.plot.trust` | everyone | Giving roles on your own plots |
+| all other `bs.*` | Op | see staff commands |
 
-`/blockstead` (Version, Lizenz, Quellcode) braucht kein Recht.
+`/blockstead` (version, licence, source code) needs no permission.
 
-## Konfiguration
+## Languages
 
-`plugins/Blockstead/config.yml` – jeder Eintrag ist in der Datei selbst erklärt; Änderungen gelten nach
-einem Neustart.
+* **`language: auto`** (default): every person gets the language of their Minecraft client – including
+  Bedrock players through Geyser. If someone changes the language in the client, it applies from the next
+  message on.
+* **`language: de`** (or another code): this language for everyone.
+* **`fallback-language`** (default `en`): for the console and for client languages without their own file.
+* Bundled are `en` and `de`. Own texts: create a file `plugins/Blockstead/lang/<code>.yml`. It only has to
+  contain the keys you want to change – everything else comes from the bundled file (so improved texts from
+  updates show up, too). A new file, e.g. `fr.yml` as a copy of [`en.yml`](../src/main/resources/lang/en.yml),
+  adds a new language. Changes take effect after a restart.
+* The **commands** stay English everywhere (`/plot claim` …), only help and messages are translated. For your
+  own shortcuts, use Paper's built-in aliases in `commands.yml` in the server's main folder:
+  ```yaml
+  aliases:
+    grundstueck:
+    - plot $1-
+    gs-kaufen:
+    - plot claim $1-
+  ```
+  Such aliases have no tab completion for the subcommands.
 
-| Abschnitt | Inhalt |
+## Configuration
+
+`plugins/Blockstead/config.yml` – every entry is explained in the file itself; changes take effect after a
+restart.
+
+| Section | Contents |
 |---|---|
-| `display` | LuckPerms-Präfixe an/aus, Vorlagen für Chat und Tab-Liste (`{prefix}`, `{name}`, `{suffix}`, `{message}`), Sortierung der Tab-Liste nach Gruppengewicht, Nametag |
-| `join-info` | Login-Nachricht (z.B. Teamspeak, Discord); MiniMessage-Formatierung (ohne `run_command`), `http(s)://`-Adressen werden anklickbar. Für Teamspeak einen Einladungslink wie `https://invite.teamspeak.com/<Adresse>` verwenden – Minecraft öffnet nur http(s)-Links |
-| `announce` | Präfix, Einblendung und Ton von `/announce` |
-| `backups` | Sicherung beim Start an/aus, Anzahl der aufbewahrten Sicherungen |
-| `economy` | `import-old-balances`: alte Kontostände aus 1.x einmalig übertragen (Währungsname und Startguthaben stellt man im Economy-Plugin ein) |
-| `plots` | Preis (ganze Zahl in der Währung des Economy-Plugins), Wartezeit für `unclaim reset`, WorldGuard-Priorität, Standard-Flags neuer Grundstücke |
-| `roles` | Rollen unterhalb von „besitzende“ und ihre Rechte (`build`, `containers`, `doors`, `workstations`, `entities`, `home`) |
+| `language`, `fallback-language` | Language of the messages, see [Languages](#languages) |
+| `display` | LuckPerms prefixes on/off, templates for chat and tab list (`{prefix}`, `{name}`, `{suffix}`, `{message}`), sorting the tab list by group weight, nametag |
+| `join-info` | Join message (e.g. Teamspeak, Discord); MiniMessage formatting (without `run_command`), `http(s)://` addresses become clickable. For Teamspeak use an invite link like `https://invite.teamspeak.com/<address>` – Minecraft only opens http(s) links |
+| `announce` | Prefix, title and sound of `/announce` |
+| `backups` | Backup at startup on/off, number of backups kept |
+| `economy` | `import-old-balances`: transfer old balances from 1.x once (currency name and starting balance are set in the economy plugin) |
+| `plots` | Price (a whole number in the economy plugin's currency), waiting time for `unclaim reset`, WorldGuard priority, default flags of new plots |
+| `roles` | Roles below "owner": rights (`build`, `containers`, `doors`, `workstations`, `entities`, `home`), optional `aliases` (further keys) and `name` (fixed display name instead of a translation) |
 
-Hinweise:
+Notes:
 
-* Neue Einträge aus Updates werden **nicht** automatisch in eine bestehende `config.yml` übernommen; fehlende
-  Einträge haben ihren Standardwert. Die aktuelle Vorlage: [`src/main/resources/config.yml`](../src/main/resources/config.yml).
-* Schutz-Flags wie `use`, `interact`, `chest-access` oder `build` gehören nicht in `plots.default-flags`: In
-  WorldGuard gelten sie auch für Besitzende und Mitglieder. Fremde sperrt WorldGuard ohnehin aus; was
-  Mitglieder dürfen, regeln die Rollen. Solche Einträge werden mit Warnung ignoriert.
-* Ohne LuckPerms läuft das Plugin ohne Präfix-Anzeige (Warnung im Log).
+* New entries from updates are **not** added to an existing `config.yml` automatically; missing entries have
+  their default value. The current template: [`src/main/resources/config.yml`](../src/main/resources/config.yml).
+* Protection flags like `use`, `interact`, `chest-access` or `build` don't belong in `plots.default-flags`:
+  in WorldGuard they apply to owners and members, too. WorldGuard keeps strangers out anyway; what members may
+  do is defined by the roles. Such entries are ignored with a warning.
+* Without LuckPerms the plugin runs without the prefix display (warning in the log).
 
-## Daten und Sicherungen
+## Data and backups
 
-`plugins/Blockstead/data.db` (SQLite) enthält Zuhause, Rollen und wer welches Grundstück für wie viel gekauft
-hat (für die Erstattung). Die Kontostände führt seit 2.0.0 das Economy-Plugin; die alten Stände aus 1.x
-stehen nur noch als Nachweis in der Tabelle `accounts` (mit Zeitpunkt der Übertragung). Besitzende und Mitglieder stehen in WorldGuard; die Sicherungen zum Zurücksetzen
-liegen als WorldEdit-Schematic in `plugins/Blockstead/snapshots/<Welt>/<ID>.schem`.
+`plugins/Blockstead/data.db` (SQLite) holds homes, roles and who bought which plot for how much (for refunds).
+Since 2.0.0 the economy plugin keeps the balances; the old balances from 1.x only remain as a record in the
+`accounts` table (with the time of the transfer). Owners and members are stored in WorldGuard; the reset
+snapshots are WorldEdit schematics in `plugins/Blockstead/snapshots/<world>/<ID>.schem`.
 
-* **Sicherung bei jedem Start:** Bevor das Plugin etwas ändert (auch vor Datenmigrationen eines Updates),
-  werden `data.db` und die WorldGuard-Regionsdateien aller Welten nach
-  `plugins/Blockstead/backups/<Datum_Uhrzeit>/` kopiert; die neuesten 10 bleiben. Speichert WorldGuard in
-  MySQL, gibt es eine Warnung – dann die Regionen separat sichern.
-* **Wiederherstellen:** Server stoppen, `data.db` aus dem Sicherungsordner nach `plugins/Blockstead/` und
-  `worldguard/<Welt>/regions.yml` nach `plugins/WorldGuard/worlds/<Welt>/` kopieren, Server starten.
-* **Schutz vor älteren Versionen:** Ist die Datenbank neuer als die installierte Plugin-Version, startet
-  das Plugin nicht und verändert nichts.
-* **Konsistenzprüfung:** Beim Start werden Einträge zu Grundstücken gemeldet, die es in WorldGuard nicht
-  (mehr) gibt (z.B. nach `/rg remove` statt `/plot remove`). Es wird nichts automatisch gelöscht.
-* Die Welten selbst sichert das Plugin nicht – dafür ist ein Server-Backup zuständig.
+* **Backup at every start:** before the plugin changes anything (including data migrations of an update),
+  `data.db` and the WorldGuard region files of all worlds are copied to
+  `plugins/Blockstead/backups/<date_time>/`; the newest 10 are kept. If WorldGuard stores regions in MySQL,
+  there is a warning – back them up separately then.
+* **Restoring:** stop the server, copy `data.db` from the backup folder to `plugins/Blockstead/` and
+  `worldguard/<world>/regions.yml` to `plugins/WorldGuard/worlds/<world>/`, start the server.
+* **Protection against older versions:** if the database is newer than the installed plugin version, the
+  plugin refuses to start and changes nothing.
+* **Consistency check:** at startup, entries for plots that don't exist (any more) in WorldGuard are reported
+  (e.g. after `/rg remove` instead of `/plot remove`). Nothing is deleted automatically.
+* The plugin doesn't back up the worlds themselves – that's what a server backup is for.

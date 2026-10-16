@@ -1,109 +1,116 @@
-# Blockstead – Projektnotizen
+# Blockstead – Project notes
 
-Offene Punkte, Erkenntnisse und Grundsatzentscheidungen aus der Entwicklung. Ergänzt
-[development.md](development.md) um das „Warum“ – und um Fallen, in die man sonst ein zweites Mal tritt.
+Open points, findings and design decisions from development. Adds the "why" to
+[development.md](development.md) – and the traps you would otherwise fall into a second time.
 
-## Offene Punkte
+## Open points
 
-* **v2.1.0: Sprachauswahl Deutsch/Englisch.** Alle Texte für Spielende und Team (Nachrichten, Hilfe,
-  Kommentare der `config.yml`, Doku) sollen auf Deutsch oder Englisch verfügbar sein. Heute stehen die
-  deutschen Texte direkt in den Befehls- und Service-Klassen; sie müssen in Sprachdateien wandern (z.B.
-  `lang/de.yml`, `lang/en.yml`). Zu klären: Sprache pro Server (config.yml) oder pro Person (Sprache des
-  Minecraft-Clients). Vor weiteren neuen Texten umsetzen, damit nicht noch mehr verschoben werden muss.
-* **Stadtbereiche aus Blockstead:** Städte sollen als eigenes Konzept aus Blockstead kommen statt als von
-  Hand gepflegte WorldGuard-Region – mit Anzeige der Stadt in `/plot info`, Filter in `/plot list` und
-  Preisen pro Stadt. Grundstücke müssen weiterhin auch ohne Stadt funktionieren. Bei der Umsetzung die
-  Prioritätsregeln unten beachten (Stadt-Region niedriger als Grundstücke, nicht als Eltern-Region).
-* **Liste aller Grundstücke für das Team:** ein Befehl, der alle Grundstücke einer oder aller Welten mit
-  Status (frei/vergeben), Besitzenden und ggf. Stadt auflistet – mit Seiten bei vielen Einträgen.
-* **Kein Reload-Befehl:** Änderungen an der `config.yml` brauchen einen Neustart.
-* **Zurücksetzen läuft synchron** im Hauptthread (WorldEdit ohne asynchrone Verarbeitung); bei sehr großen
-  Grundstücken stockt der Server kurz. Die Wartezeit für `unclaim reset` begrenzt den Missbrauch.
+* **City areas from Blockstead:** cities should be a concept of Blockstead itself instead of a WorldGuard
+  region maintained by hand – showing the city in `/plot info`, a filter in `/plot list` and prices per city.
+  Plots must keep working without a city, too. Mind the priority rules below (city region lower than plots,
+  not as a parent region).
+* **List of all plots for staff:** a command listing all plots of one or all worlds with status (free/taken),
+  owners and, if any, the city – with pages for many entries.
+* **No reload command:** changes to `config.yml` and the language files need a restart.
+* **Restoring runs synchronously** on the main thread (WorldEdit without asynchronous processing); with very
+  large plots the server stalls briefly. The waiting time for `unclaim reset` limits abuse.
 
-## Erkenntnisse und Stolperfallen
+## Findings and pitfalls
 
 **WorldGuard**
-* Schutz-Flags (`use`, `interact`, `chest-access`, `build`, …) gelten ohne `-g` für die Gruppe *alle* –
-  ein `deny` sperrt also auch Besitzende und Mitglieder aus. Ops merken das nicht, weil WorldGuard ihnen
-  alles erlaubt. Fremde sperrt WorldGuard über die Mitgliedschaft ohnehin aus; diese Flags gehören nicht
-  in die Standard-Flags von Grundstücken (`PluginConfig` ignoriert sie, `LegacyFlagFix` hat sie einmalig
-  von alten Grundstücken entfernt).
-* Eigene Flags (hier `region-name`) müssen in `onLoad()` registriert werden, bevor WorldGuard startet.
-* Überlappende Regionen: Nur die höchste Priorität zählt. Bei gleicher Priorität muss man in **allen**
-  Regionen Mitglied sein, um zu bauen, und `deny` schlägt `allow`. Darum dürfen sich Grundstücke nie
-  überlappen, und Regionen wie Städte brauchen eine niedrigere Priorität als die Grundstücke.
-* Eltern-Regionen (`/rg setparent`) vererben Flags **und** Mitglieder/Besitzende an ihre Kinder.
-* Region-IDs dürfen auch `/` enthalten – vor der Verwendung in Dateinamen bereinigen.
-* Das umgebende Rechteck eines Polygon-Grundstücks ragt in Nachbargrundstücke; beim Einfügen einer
-  Sicherung deshalb immer mit `RegionMask` auf die echte Form begrenzen.
+* Protection flags (`use`, `interact`, `chest-access`, `build`, …) apply to the group *all* unless set with
+  `-g` – a `deny` therefore locks out owners and members, too. Ops don't notice because WorldGuard allows them
+  everything. WorldGuard keeps strangers out through membership anyway; these flags don't belong in the
+  default flags of plots (`PluginConfig` ignores them, `LegacyFlagFix` removed them once from old plots).
+* Custom flags (here `region-name`) must be registered in `onLoad()`, before WorldGuard starts.
+* Overlapping regions: only the highest priority counts. With the same priority you have to be a member of
+  **all** regions to build, and `deny` beats `allow`. That's why plots must never overlap and regions like
+  cities need a lower priority than the plots.
+* Parent regions (`/rg setparent`) pass flags **and** members/owners on to their children.
+* Region IDs may contain `/` – clean them up before using them in file names.
+* The bounding box of a polygon plot reaches into neighbouring plots; when pasting a snapshot, always limit it
+  to the real shape with a `RegionMask`.
 
 **Paper**
-* `api-version` in der plugin.yml muss `major.minor` sein (`'26.2'`); `'26'` wird abgelehnt. Sie ist die
-  **Mindestversion** – kompiliert und getestet wird gegen die neueste Paper-Version, `api-version` bleibt
-  auf der ältesten unterstützten, solange keine neuere API genutzt wird.
-* Paper 26.3: `Entity#isInvulnerable()` spiegelt `setInvulnerable()` nicht mehr wider – stattdessen
-  `isMarkedInvulnerable()` (deshalb braucht Blockstead ab 1.0.1 Paper 26.3).
-* `ArgumentTypes.world()` erwartet Dimensionsschlüssel (`minecraft:overworld`) und lehnt den Weltnamen
-  `world` ab, der überall sonst angezeigt wird – daher ein eigenes Welt-Argument per Name.
-* `Material#isInteractable` / `BlockType#isInteractable` sind veraltet und ungenau (z.B. zählen Treppen
-  dazu) – stattdessen feste Listen.
-* Befehle über Brigadier: `com.mojang.brigadier.Command` nicht mit `org.bukkit.command.Command`
-  verwechseln. Rechte per `.requires(...)` blenden Befehle ohne Recht komplett aus.
-* Ein Recht mit `default: false` hat wirklich niemand – auch nicht Ops und die Konsole; Paper zeigt dann
-  „Unknown command“.
-* Teams des Haupt-Scoreboards speichert Minecraft mit der Welt (`world/data/minecraft/scoreboard.dat`),
-  auch beim automatischen Speichern. Nach einem Absturz bleiben sie stehen – darum entfernt `DisplayService`
-  seine `bs_…`-Teams beim Start und beim Beenden.
-* MiniMessage erlaubt `<click:run_command:…>`: Wer klickt, führt den Befehl mit den eigenen Rechten aus.
-  `TextFormat` entfernt diese Klick-Aktion; Links und `suggest_command` bleiben.
-* Die Meldung `HorriblePlayerLoginEventHack` kommt von LuckPerms/WorldGuard und ist harmlos.
+* `api-version` in plugin.yml must be `major.minor` (`'26.3'`); `'26'` is rejected. It is the **minimum**
+  version – compile and test against the newest Paper version and keep `api-version` at the oldest supported
+  one as long as no newer API is used.
+* Paper 26.3: `Entity#isInvulnerable()` no longer reflects `setInvulnerable()` – use `isMarkedInvulnerable()`
+  instead (that's why Blockstead 1.0.1 needed Paper 26.3).
+* `ArgumentTypes.world()` expects dimension keys (`minecraft:overworld`) and rejects the world name `world`
+  shown everywhere else – hence an own world argument by name.
+* `Material#isInteractable` / `BlockType#isInteractable` are deprecated and inaccurate (e.g. stairs count) –
+  use fixed lists instead.
+* Brigadier commands: don't confuse `com.mojang.brigadier.Command` with `org.bukkit.command.Command`.
+  Permissions via `.requires(...)` hide commands without permission completely.
+* A permission with `default: false` really has nobody – not even ops and the console; Paper then shows
+  "Unknown command".
+* Teams of the main scoreboard are saved with the world (`world/data/minecraft/scoreboard.dat`), also on
+  autosave. After a crash they remain – that's why `DisplayService` removes its `bs_…` teams on startup and
+  shutdown.
+* MiniMessage allows `<click:run_command:…>`: whoever clicks runs the command with their own permissions.
+  `TextFormat` removes this click action; links and `suggest_command` remain.
+* `Player#locale()` is the client language and also works for Bedrock players through Geyser; it can change
+  during a session, so the language is determined per message, not once at join.
+* Join/quit messages for everyone are one component – for per-person languages, Blockstead sets them to
+  `null` and sends a message to every person (and the console) itself.
+* Bukkit's `YamlConfiguration` reads flat keys with dots (`plot.claim.success`) as nested sections –
+  `getKeys(true)` + `isString` give the flat list again.
+* The message `HorriblePlayerLoginEventHack` comes from LuckPerms/WorldGuard and is harmless.
 
 **Economy (Vault/EssentialsX)**
-* EssentialsX meldet seinen Vault-Provider schon in `onLoad()` an, benutzbar ist er aber erst nach seinem
-  `onEnable()`. Darum laufen Status-Prüfung und Übertragung der alten Kontostände im ersten Tick nach dem
-  Start, und `isAvailable()` prüft zusätzlich `isEnabled()` des Providers. Den Provider bei jedem Zugriff neu
-  holen, nicht zwischenspeichern.
-* Vault kennt kein „Kontostand setzen“ – dafür die Differenz ein- bzw. abbuchen.
-* Vault rechnet mit `double`, Blockstead mit ganzen Zahlen; `getBalance` kann Nachkommastellen liefern.
-* Für Personen, die offline sind, gibt es im Economy-Plugin evtl. noch kein Konto: vor dem Einbuchen
-  `hasAccount`/`createPlayerAccount`.
-* EssentialsX legt Konten, die über Vault für Personen angelegt werden, die gerade offline sind, als **NPC**
-  an, wenn die UUID Version 2 oder 3 hat (Offline-Mode-Server, NPC-Plugins). NPC-Konten erscheinen nicht in
-  `/baltop`. Echte Konten im Online-Mode haben Version 4 und sind nicht betroffen.
-* Über Vault angelegte Konten haben bei EssentialsX bis zum nächsten Join der Person keinen Namen –
-  `/baltop` zeigt so lange „null“.
-* EssentialsX `currency-symbol` erlaubt nur **ein** Zeichen; längere Werte (z.B. „Coins“) werden still zu `$`.
-* EssentialsX unterstützt Paper 26.3 erst ab dem Dev-Build 2.22.1-SNAPSHOT; das Release 2.22.0 endet bei
+* EssentialsX registers its Vault provider already in `onLoad()`, but it's only usable after its `onEnable()`.
+  That's why the status check and the transfer of old balances run in the first tick after startup, and
+  `isAvailable()` also checks the provider's `isEnabled()`. Fetch the provider on every access, don't cache it.
+* Vault has no "set balance" – deposit or withdraw the difference instead.
+* Vault calculates with `double`, Blockstead with whole numbers; `getBalance` may return decimals.
+* People who are offline may not have an account in the economy plugin yet: call
+  `hasAccount`/`createPlayerAccount` before depositing.
+* EssentialsX creates accounts that are created through Vault for people who are offline as **NPCs** if the
+  UUID has version 2 or 3 (offline-mode servers, NPC plugins). NPC accounts don't show up in `/baltop`. Real
+  accounts in online mode have version 4 and aren't affected.
+* Accounts created through Vault have no name in EssentialsX until the person's next join – `/baltop` shows
+  "null" until then.
+* EssentialsX `currency-symbol` allows only **one** character; longer values (e.g. "Coins") silently become `$`.
+* EssentialsX supports Paper 26.3 only from the dev build 2.22.1-SNAPSHOT on; the release 2.22.0 ends at
   26.1.2.
-* Die VaultAPI gibt es nur über JitPack; ohne `transitive = false` zieht sie eine alte Bukkit-API mit.
-* `Player#setInvulnerable` (der frühere Befehl `/invincible`) wird in den Spieldaten gespeichert und bleibt
-  bestehen, auch wenn das Plugin, das ihn gesetzt hat, weg ist.
+* The VaultAPI is only available through JitPack; without `transitive = false` it pulls in an old Bukkit API.
+* `Player#setInvulnerable` (the former command `/invincible`) is stored in the player data and remains even
+  when the plugin that set it is gone.
 
-**Abhängigkeiten**
-* WorldEdit-Betaversionen gibt es nicht im Maven-Repository – dann gegen die letzte Release-Version kompilieren. Auf Modrinth
-  teilt sich die Versionsnummer mit dem Fabric-Build, darum lädt `runServer` die Bukkit-Jar per URL.
-* LuckPerms ist optional: Klassen mit LuckPerms-Typen (Paket `display`) dürfen nur geladen werden, wenn
-  LuckPerms installiert ist, sonst bricht Java mit `NoClassDefFoundError` ab.
-* Der SQLite-Treiber wird von Paper mitgeliefert.
+**Dependencies**
+* WorldEdit beta versions aren't in the Maven repository – compile against the last release then. On Modrinth
+  the version number is shared with the Fabric build, which is why `runServer` downloads the Bukkit jar by URL.
+* LuckPerms is optional: classes with LuckPerms types (`display` package) may only be loaded if LuckPerms is
+  installed, otherwise Java fails with `NoClassDefFoundError`.
+* The SQLite driver comes with Paper.
 
-**Betrieb**
-* LuckPerms-Befehle einzeln eingeben: Beim Einfügen mehrerer Zeilen auf einmal liest LuckPerms den Rest als
-  Kontext-Bedingungen (`server=…`) – der Präfix gilt dann nirgends.
-* Nicht bauen, während der lokale Testserver läuft – das ersetzt die Jar unter dem laufenden Server.
+**Running a server**
+* Enter LuckPerms commands one at a time: when several lines are pasted at once, LuckPerms reads the rest as
+  context conditions (`server=…`) – the prefix then applies nowhere.
+* Don't build while the local test server is running – that replaces the jar underneath the running server.
 
-## Grundsatzentscheidungen
+## Design decisions
 
-* **Rollen schränken nur ein:** Jede Rolle unterhalb von „besitzende“ ist WorldGuard-Mitglied; WorldGuard
-  hält Fremde fern, Blockstead verbietet Mitgliedern zusätzlich, was ihre Rolle nicht darf. Etwas zu
-  erlauben, das WorldGuard verboten hat, wäre fehleranfällig.
-* **WorldGuard ist die Quelle für Besitz und Mitgliedschaft;** die Datenbank speichert nur, was WorldGuard
-  nicht kennt (Käufe für die Erstattung, Rollen, Zuhause). Kontostände führt seit 2.0.0 das Economy-Plugin.
-* **Eine Sicherung pro Grundstück** zum Zurücksetzen, angelegt beim Anlegen; ältere Stände gibt es nicht.
-* **Keine Allgemein-Befehle, keine eigene Währung** (seit 2.0.0): Blockstead kümmert sich um Grundstücke.
-  `/spawn`, `/god`, `/suicide`, Kontostände usw. kommen von EssentialsX bzw. einem Economy-Plugin über
-  Vault. Ausnahme: `/announce` (Team-Nachricht mit Einblendung), die Login-Nachricht und die
-  LuckPerms-Präfixe.
-* **Versionierung nach Semantic Versioning 2.0.0** (semver.org) – was als Major zählt, steht in
-  [development.md](development.md#versionierung).
-* **Rechte-Präfix `bs.*`** (**B**lock**s**tead) – unverändert seit dem Vorgänger „Buildserver“.
-* **Lizenz AGPL-3.0-or-later;** Issues willkommen, Pull Requests werden nicht angenommen.
+* **Roles only restrict:** every role below "owner" is a WorldGuard member; WorldGuard keeps strangers out,
+  Blockstead additionally forbids members what their role doesn't allow. Allowing something WorldGuard has
+  forbidden would be error-prone.
+* **WorldGuard is the source for ownership and membership;** the database only stores what WorldGuard doesn't
+  know (purchases for refunds, roles, homes). Since 2.0.0 the economy plugin keeps the balances.
+* **One snapshot per plot** for restoring, made at creation; there are no older states.
+* **No general commands, no own currency** (since 2.0.0): Blockstead takes care of plots. `/spawn`, `/god`,
+  `/suicide`, balances etc. come from EssentialsX or an economy plugin through Vault. Exceptions:
+  `/announce` (staff message with a title), the join message and the LuckPerms prefixes.
+* **Languages** (since 2.1.0): texts in language files `lang/<code>.yml`, per person from the client language
+  or fixed per server; bundled files are not copied to the plugin folder, own files only override single
+  keys. Log messages and `config.yml` comments are English.
+* **Commands stay English** everywhere; only help and messages are translated. Localized command names would
+  make help between players and guides inconsistent and let translations break commands – servers that want
+  shortcuts use Paper's `commands.yml` aliases.
+* **Role keys** are English (`owner`, `resident`, `builder`, `guest`); the German keys of earlier versions
+  stay valid as aliases, so stored data and old configs keep working (minor release).
+* **Versioning according to Semantic Versioning 2.0.0** (semver.org) – what counts as major is described in
+  [development.md](development.md#versioning).
+* **Permission prefix `bs.*`** (**B**lock**s**tead) – unchanged since the predecessor "Buildserver".
+* **Licence AGPL-3.0-or-later;** issues welcome, pull requests only for translations (files in
+  `src/main/resources/lang/`).

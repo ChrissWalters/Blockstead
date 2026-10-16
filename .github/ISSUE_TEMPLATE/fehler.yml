@@ -1,46 +1,49 @@
-name: Fehler melden
-description: Etwas funktioniert nicht wie erwartet.
+name: Bug report / Fehler melden
+description: Something doesn't work as expected. / Etwas funktioniert nicht wie erwartet.
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        Danke fürs Melden! Sicherheitslücken bitte **nicht** hier, sondern vertraulich wie in
-        [SECURITY.md](https://github.com/ChrissWalters/Blockstead/blob/main/SECURITY.md) beschrieben.
+        Thanks for reporting! English or German is fine. Please **don't** report security problems here, but
+        privately as described in [SECURITY.md](https://github.com/ChrissWalters/Blockstead/blob/main/SECURITY.md).
+
+        Danke fürs Melden! Englisch oder Deutsch, beides ist in Ordnung. Sicherheitslücken bitte **nicht** hier,
+        sondern vertraulich melden.
   - type: textarea
     id: was
     attributes:
-      label: Was ist passiert?
-      description: Was hast du gemacht, was ist passiert, was hättest du erwartet?
+      label: What happened? / Was ist passiert?
+      description: What did you do, what happened, what did you expect? / Was hast du gemacht, was ist passiert, was hättest du erwartet?
       placeholder: |
-        1. /plot claim auf plot_3
-        2. Meldung „…“
-        Erwartet: …
+        1. /plot claim on plot_3
+        2. Message "…"
+        Expected: …
     validations:
       required: true
   - type: input
     id: blockstead
     attributes:
-      label: Blockstead-Version
-      description: "Zeigt /blockstead an, z.B. 1.0.0"
+      label: Blockstead version
+      description: "Shown by /blockstead, e.g. 2.1.0"
     validations:
       required: true
   - type: input
     id: server
     attributes:
-      label: Paper-, WorldEdit- und WorldGuard-Version
+      label: Paper, WorldEdit and WorldGuard version
       description: "Paper: /version · WorldEdit: /we version · WorldGuard: /wg version"
       placeholder: "Paper 26.3-200, WorldEdit 7.4.6, WorldGuard 7.0.19"
     validations:
       required: true
   - type: input
-    id: luckperms
+    id: others
     attributes:
-      label: LuckPerms-Version (falls installiert)
-      placeholder: "5.5.87 oder „nicht installiert“"
+      label: LuckPerms, Vault, economy plugin (if installed)
+      placeholder: "LuckPerms 5.5.87, Vault 1.7.3, EssentialsX 2.22.1-dev"
   - type: textarea
     id: log
     attributes:
-      label: Ausschnitt aus dem Server-Log
-      description: Fehlermeldungen und Zeilen mit [Blockstead] rund um das Problem. Bitte keine Passwörter oder IP-Adressen.
+      label: Server log excerpt / Ausschnitt aus dem Server-Log
+      description: Errors and lines with [Blockstead] around the problem. Please no passwords or IP addresses. / Bitte keine Passwörter oder IP-Adressen.
       render: text
