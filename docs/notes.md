@@ -62,6 +62,11 @@ Offene Punkte, Erkenntnisse und Grundsatzentscheidungen aus der Entwicklung. Erg
 * Vault rechnet mit `double`, Blockstead mit ganzen Zahlen; `getBalance` kann Nachkommastellen liefern.
 * Für Personen, die offline sind, gibt es im Economy-Plugin evtl. noch kein Konto: vor dem Einbuchen
   `hasAccount`/`createPlayerAccount`.
+* EssentialsX legt Konten, die über Vault für Personen angelegt werden, die gerade offline sind, als **NPC**
+  an, wenn die UUID Version 2 oder 3 hat (Offline-Mode-Server, NPC-Plugins). NPC-Konten erscheinen nicht in
+  `/baltop`. Echte Konten im Online-Mode haben Version 4 und sind nicht betroffen.
+* Über Vault angelegte Konten haben bei EssentialsX bis zum nächsten Join der Person keinen Namen –
+  `/baltop` zeigt so lange „null“.
 * EssentialsX `currency-symbol` erlaubt nur **ein** Zeichen; längere Werte (z.B. „Coins“) werden still zu `$`.
 * EssentialsX unterstützt Paper 26.3 erst ab dem Dev-Build 2.22.1-SNAPSHOT; das Release 2.22.0 endet bei
   26.1.2.

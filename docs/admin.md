@@ -51,7 +51,9 @@ Blockstead 2.0.0 gibt die eigene Währung und die allgemeinen Befehle ab:
   einmal. Der Stand im Economy-Plugin wird auf den alten Wert **gesetzt**, nicht addiert. Im Log steht je
   Konto eine Zeile und am Ende „Übertragung abgeschlossen: x von N Konto/Konten übertragen.“ Fehlgeschlagene
   Konten werden beim nächsten Start erneut versucht. Mit `economy.import-old-balances: false` werden die alten
-  Stände nicht übertragen.
+  Stände nicht übertragen. EssentialsX kennt die Namen übertragener Konten erst, wenn die Person wieder online
+  war (`/baltop` zeigt bis dahin „null“). Auf Offline-Mode-Servern legt EssentialsX die Konten als NPC an –
+  dann fehlen sie in `/baltop`.
 * **Datenbank:** Schema-Version 4. Zurück auf 1.x geht nur über die Sicherung von `data.db` vor dem Update
   (ältester Ordner vom Update-Tag unter `plugins/Blockstead/backups/`) – 1.x startet mit Schema 4 absichtlich nicht.
 * **`config.yml`:** `economy.currency-name` und `economy.start-balance` werden ignoriert (Name, Zeichen und
