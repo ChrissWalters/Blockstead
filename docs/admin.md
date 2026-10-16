@@ -122,6 +122,7 @@ and **required from the server console**, e.g. `plot assign plot_3 Alex world`.
 | `/plot snapshot <ID> [World]` | Save the current state as the reset snapshot | `bs.plot.snapshot` |
 | `/plot tp <ID> [World]`, `/plot teleport …` | Teleport to a plot – as central as possible (distance to the edge, close to the centroid) and never onto lava, fire or similar (in the game only) | `bs.plot.tp` |
 | `/plot list <Name>` | Plots of another person | `bs.plot.list.others` |
+| `/plot plots [all\|free\|taken] [World\|*] [page]` | All plots of one world or of all worlds (`*`, default), with status, owners and size; 10 per page, « back / next » are clickable; clicking a line puts `/plot tp <ID> <World>` into the chat | `bs.plot.list.all` |
 | `/plot trust`, `/plot untrust` on other people's plots | Manage roles like an owner | `bs.plot.trust.others` |
 | – | Not restricted by plot roles | `bs.plot.bypass` |
 | `/announce <message>` | Highlighted server message to everyone (chat, title, sound) | `bs.announce` |
@@ -133,7 +134,7 @@ snapshot (plots from before version 1.0.0), `reset` is refused and nothing chang
 main thread – with large plots the server may stall briefly.
 
 **From the console** you can use `info`, `trust`, `untrust`, `remove`, `assign`, `unassign`, `reset`,
-`snapshot`, `list <Name>` and `/announce`.
+`snapshot`, `list <Name>`, `plots`, `free` and `/announce`.
 
 **Refunds:** when a plot is released or deleted, the price goes back through the economy plugin to the person
 who paid. If that can't be booked (e.g. the economy plugin is missing), the plot is released anyway; the log
@@ -152,6 +153,7 @@ else through LuckPerms, e.g. `lp group team permission set bs.plot.assign true`.
 | `bs.plot.unclaim` | everyone | Giving your own plot back |
 | `bs.plot.home` | everyone | Setting a home and teleporting there |
 | `bs.plot.trust` | everyone | Giving roles on your own plots |
+| `bs.plot.free` | everyone | `/plot free [World\|*] [page]` – list of free plots |
 | all other `bs.*` | Op | see staff commands |
 
 `/blockstead` (version, licence, source code) needs no permission.

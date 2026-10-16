@@ -2,6 +2,21 @@
 
 *In English: [CHANGELOG.md](CHANGELOG.md)*
 
+## 2.2.0
+
+Grundstückslisten: eine Übersicht aller Grundstücke für das Team und der freien Grundstücke für alle.
+
+### Neu
+- `/plot plots [all|free|taken] [World|*] [Seite]` (Recht `bs.plot.list.all`, Standard Op, auch aus der
+  Konsole): alle Grundstücke einer Welt oder aller Welten mit Status, Besitzenden und Größe, 10 pro Seite.
+  « zurück / weiter » sind anklickbar; ein Klick auf eine Zeile schreibt `/plot tp <ID> <World>` in den Chat.
+- `/plot free [World|*] [Seite]` (Recht `bs.plot.free`, Standard alle): freie Grundstücke mit Größe und Preis;
+  ein Klick auf eine Zeile schreibt `/plot info <ID> <World>` in den Chat.
+
+### Hinweise zum Update von 2.1.x
+- Server, die Spielenden ihre Rechte in LuckPerms ausdrücklich geben (statt der Standardwerte des Plugins),
+  ergänzen `bs.plot.free` in deren Gruppe, z.B. `lp group default permission set bs.plot.free true`.
+
 ## 2.1.0
 
 Sprachunterstützung: Blockstead spricht die Sprache des Minecraft-Clients.

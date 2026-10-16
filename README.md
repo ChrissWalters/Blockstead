@@ -32,6 +32,7 @@ All commands have tab completion.
 | `/plot info [ID]` | Who owns the plot, who has which role, is it free? |
 | `/plot claim [ID]` | Buy a free plot |
 | `/plot list` | Your plots |
+| `/plot free [World]` | Free plots you can buy, with size and price – click a line to put `/plot info` for it into the chat |
 | `/plot home` | Teleport to your home |
 | `/plot home set` | Set your home here (on your plot or with a suitable role) |
 | `/plot trust <name> <role> [ID]` | Give someone a role on your plot |

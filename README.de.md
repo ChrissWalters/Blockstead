@@ -35,6 +35,7 @@ Hilfe und Meldungen kommen in deiner Sprache.
 | `/plot info [ID]` | Wem gehört das Grundstück, wer hat welche Rolle, ist es frei? |
 | `/plot claim [ID]` | Freies Grundstück kaufen |
 | `/plot list` | Deine Grundstücke |
+| `/plot free [World]` | Freie Grundstücke zum Kaufen, mit Größe und Preis – eine Zeile anklicken schreibt `/plot info` dafür in den Chat |
 | `/plot home` | Zu deinem Zuhause teleportieren |
 | `/plot home set` | Dein Zuhause hier setzen (auf deinem Grundstück oder mit passender Rolle) |
 | `/plot trust <Name> <Rolle> [ID]` | Jemandem eine Rolle auf deinem Grundstück geben |

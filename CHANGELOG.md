@@ -2,6 +2,21 @@
 
 *Auf Deutsch: [CHANGELOG.de.md](CHANGELOG.de.md)*
 
+## 2.2.0
+
+Plot lists: an overview of all plots for staff and of the free plots for everyone.
+
+### New
+- `/plot plots [all|free|taken] [World|*] [page]` (permission `bs.plot.list.all`, default Op, also from the
+  console): all plots of one world or of all worlds with status, owners and size, 10 per page. « back / next »
+  are clickable; clicking a line puts `/plot tp <ID> <World>` into the chat.
+- `/plot free [World|*] [page]` (permission `bs.plot.free`, default everyone): free plots with size and price;
+  clicking a line puts `/plot info <ID> <World>` into the chat.
+
+### Notes on updating from 2.1.x
+- Servers that give player permissions explicitly in LuckPerms (instead of the plugin defaults) add
+  `bs.plot.free` to the group of the players, e.g. `lp group default permission set bs.plot.free true`.
+
 ## 2.1.0
 
 Language support: Blockstead speaks the language of the Minecraft client.

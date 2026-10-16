@@ -44,6 +44,12 @@ permissions:
   bs.plot.list.others:
     description: "able to use /plot list <Name>"
     default: op
+  bs.plot.list.all:
+    description: "able to list all plots with /plot plots"
+    default: op
+  bs.plot.free:
+    description: "able to list free plots with /plot free"
+    default: true
   bs.plot.assign:
     description: "able to assign a free plot for free with /plot assign"
     default: op

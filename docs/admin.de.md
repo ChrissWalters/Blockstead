@@ -125,6 +125,7 @@ Welt) und **aus der Server-Konsole Pflicht**, z.B. `plot assign plot_3 Alex worl
 | `/plot snapshot <ID> [World]` | Aktuellen Zustand als Sicherung zum Zurücksetzen speichern | `bs.plot.snapshot` |
 | `/plot tp <ID> [World]`, `/plot teleport …` | Zu einem Grundstück teleportieren – möglichst mittig (Abstand zum Rand, nahe dem Flächenschwerpunkt) und nie auf Lava, Feuer o.Ä. (nur im Spiel) | `bs.plot.tp` |
 | `/plot list <Name>` | Grundstücke einer anderen Person | `bs.plot.list.others` |
+| `/plot plots [all\|free\|taken] [World\|*] [Seite]` | Alle Grundstücke einer Welt oder aller Welten (`*`, Standard) mit Status, Besitzenden und Größe; 10 pro Seite, « zurück / weiter » sind anklickbar; ein Klick auf eine Zeile schreibt `/plot tp <ID> <World>` in den Chat | `bs.plot.list.all` |
 | `/plot trust`, `/plot untrust` auf fremden Grundstücken | Rollen verwalten wie Besitzende | `bs.plot.trust.others` |
 | – | Wird von Grundstücks-Rollen nicht eingeschränkt | `bs.plot.bypass` |
 | `/announce <Nachricht>` | Auffällige Server-Nachricht an alle (Chat, Einblendung, Ton) | `bs.announce` |
@@ -136,7 +137,7 @@ Sekunden wiederholen. Ohne Sicherung (Grundstücke von vor Version 1.0.0) wird `
 geändert. Zurücksetzen läuft im Hauptthread – bei großen Grundstücken kann der Server kurz stocken.
 
 **Aus der Konsole** gehen `info`, `trust`, `untrust`, `remove`, `assign`, `unassign`, `reset`, `snapshot`,
-`list <Name>` und `/announce`.
+`list <Name>`, `plots`, `free` und `/announce`.
 
 **Erstattungen:** Beim Freigeben oder Löschen geht der Kaufpreis über das Economy-Plugin an die Person, die
 bezahlt hat. Kann das nicht gebucht werden (z.B. Economy-Plugin fehlt), wird das Grundstück trotzdem
@@ -155,6 +156,7 @@ anderen über LuckPerms, z.B. `lp group team permission set bs.plot.assign true`
 | `bs.plot.unclaim` | alle | Eigenes Grundstück zurückgeben |
 | `bs.plot.home` | alle | Zuhause setzen und hinteleportieren |
 | `bs.plot.trust` | alle | Rollen auf eigenen Grundstücken vergeben |
+| `bs.plot.free` | alle | `/plot free [World\|*] [Seite]` – Liste der freien Grundstücke |
 | alle übrigen `bs.*` | Op | siehe Team-Befehle |
 
 `/blockstead` (Version, Lizenz, Quellcode) braucht kein Recht.

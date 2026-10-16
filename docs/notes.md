@@ -9,10 +9,9 @@ Open points, findings and design decisions from development. Adds the "why" to
   region maintained by hand – showing the city in `/plot info`, a filter in `/plot list` and prices per city.
   Plots must keep working without a city, too. Mind the priority rules below (city region lower than plots,
   not as a parent region).
-* **List of all plots for staff:** a command listing all plots of one or all worlds with status (free/taken),
-  owners and, if any, the city – with pages for many entries.
 * **No reload command:** changes to `config.yml` and the language files need a restart.
-* **Planned versions:** 2.2.0 list of all plots for staff, 2.3.0 city areas (each in its own branch).
+* **Planned versions:** 2.3.0 city areas (in its own branch) – then `/plot plots` and `/plot free` also show
+  the city and get a city filter.
 * **Restoring runs synchronously** on the main thread (WorldEdit without asynchronous processing); with very
   large plots the server stalls briefly. The waiting time for `unclaim reset` limits abuse.
 
@@ -43,6 +42,10 @@ Open points, findings and design decisions from development. Adds the "why" to
 * `Material#isInteractable` / `BlockType#isInteractable` are deprecated and inaccurate (e.g. stairs count) –
   use fixed lists instead.
 * Brigadier commands: don't confuse `com.mojang.brigadier.Command` with `org.bukkit.command.Command`.
+* `StringArgumentType.word()` only accepts letters, digits and `_-.+` – a `*` ("all worlds") must be its own
+  literal next to the argument (Brigadier prefers a matching literal).
+* Clickable page links (« back / next ») use `ClickEvent.runCommand` set in code with a fixed own command – the
+  removal of `run_command` only applies to texts from language files and the config.
   Permissions via `.requires(...)` hide commands without permission completely.
 * A permission with `default: false` really has nobody – not even ops and the console; Paper then shows
   "Unknown command".

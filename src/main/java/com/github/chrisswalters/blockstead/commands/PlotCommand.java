@@ -120,6 +120,8 @@ public final class PlotCommand {
                                 .requires(source -> source.getSender().hasPermission("bs.plot.list.others"))
                                 .suggests(PlayerLookup::suggestOnlineNames)
                                 .executes(PlotCommand::listOther)))
+                .then(PlotListCommand.plots())
+                .then(PlotListCommand.free())
                 .then(Commands.literal("home")
                         .requires(source -> source.getSender().hasPermission("bs.plot.home"))
                         .executes(PlotCommand::home)
@@ -190,6 +192,9 @@ public final class PlotCommand {
             helpLine(sender, "help.unclaim", "/plot unclaim ");
         }
         helpLine(sender, "help.list", "/plot list");
+        if (sender.hasPermission("bs.plot.free")) {
+            helpLine(sender, "help.free", "/plot free");
+        }
         if (sender.hasPermission("bs.plot.home")) {
             helpLine(sender, "help.home", "/plot home");
             helpLine(sender, "help.home-set", "/plot home set");
@@ -200,6 +205,7 @@ public final class PlotCommand {
         }
         String[][] staffLines = {
                 {"bs.plot.tp", "help.tp", "/plot tp "}, {"bs.plot.list.others", "help.list-others", "/plot list "},
+                {"bs.plot.list.all", "help.plots", "/plot plots "},
                 {"bs.plot.create", "help.create", "/plot create"}, {"bs.plot.remove", "help.remove", "/plot remove "},
                 {"bs.plot.assign", "help.assign", "/plot assign "}, {"bs.plot.unassign", "help.unassign", "/plot unassign "},
                 {"bs.plot.reset", "help.reset", "/plot reset "}, {"bs.plot.snapshot", "help.snapshot", "/plot snapshot "}};
@@ -529,7 +535,7 @@ public final class PlotCommand {
      * Bewusst nicht {@code ArgumentTypes.world()}: das erwartet den Dimensionsschlüssel
      * ("minecraft:overworld") und lehnt "world" ab.
      */
-    private static RequiredArgumentBuilder<CommandSourceStack, String> worldArgument() {
+    static RequiredArgumentBuilder<CommandSourceStack, String> worldArgument() {
         return Commands.argument("world", StringArgumentType.word())
                 .suggests(PlotCommand::suggestWorlds);
     }
@@ -539,7 +545,7 @@ public final class PlotCommand {
      *
      * @throws CommandSyntaxException wenn es die Welt nicht gibt (Minecraft zeigt die Meldung rot an)
      */
-    private static World worldArgument(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+    static World worldArgument(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         String name = StringArgumentType.getString(context, "world");
         World world = Bukkit.getWorld(name);
         if (world == null) {
@@ -558,7 +564,7 @@ public final class PlotCommand {
         return world;
     }
 
-    private static CompletableFuture<Suggestions> suggestWorlds(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
+    static CompletableFuture<Suggestions> suggestWorlds(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
         String input = builder.getRemainingLowerCase();
         for (World world : Bukkit.getWorlds()) {
             if (world.getName().toLowerCase().startsWith(input)) {
