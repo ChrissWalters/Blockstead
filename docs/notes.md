@@ -12,6 +12,7 @@ Open points, findings and design decisions from development. Adds the "why" to
 * **List of all plots for staff:** a command listing all plots of one or all worlds with status (free/taken),
   owners and, if any, the city – with pages for many entries.
 * **No reload command:** changes to `config.yml` and the language files need a restart.
+* **Planned versions:** 2.2.0 list of all plots for staff, 2.3.0 city areas (each in its own branch).
 * **Restoring runs synchronously** on the main thread (WorldEdit without asynchronous processing); with very
   large plots the server stalls briefly. The waiting time for `unclaim reset` limits abuse.
 

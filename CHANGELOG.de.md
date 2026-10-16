@@ -17,6 +17,8 @@ Sprachunterstützung: Blockstead spricht die Sprache des Minecraft-Clients.
 - Rollen in der `config.yml` können `aliases` haben; ohne `name` wird der Rollenname übersetzt angezeigt.
 - Beim Bauen wird geprüft, dass alle Sprachdateien dieselben Schlüssel und Platzhalter haben.
 - Übersetzungen können per Pull Request beigetragen werden (nur Dateien in `src/main/resources/lang/`).
+- `/plot help` (neben `/plot`); jede Zeile der Hilfe ist anklickbar und schreibt den Befehl in die Chatzeile,
+  ohne ihn abzuschicken – ID, Name usw. lassen sich so noch ergänzen.
 
 ### Geändert
 - Neue Standard-Schlüssel der Rollen: `owner`, `resident`, `builder`, `guest`. Die bisherigen Schlüssel

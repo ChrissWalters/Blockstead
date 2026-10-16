@@ -28,7 +28,7 @@ All commands have tab completion.
 
 | Command | What it does |
 |---|---|
-| `/plot` | Overview of all commands you may use |
+| `/plot`, `/plot help` | Overview of all commands you may use – click a line to put the command into the chat, then add the ID or name and press Enter |
 | `/plot info [ID]` | Who owns the plot, who has which role, is it free? |
 | `/plot claim [ID]` | Buy a free plot |
 | `/plot list` | Your plots |

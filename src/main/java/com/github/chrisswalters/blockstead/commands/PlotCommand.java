@@ -22,6 +22,9 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.command.brigadier.MessageComponentSerializer;
 import org.bukkit.Bukkit;
@@ -45,7 +48,7 @@ import java.util.stream.Collectors;
  *
  * <p>Für alle (Recht {@code bs.plot} bzw. eigene Unterrechte mit Standard "alle"):
  * <ul>
- *     <li>{@code /plot} – Hilfe</li>
+ *     <li>{@code /plot}, {@code /plot help} – Hilfe; jede Zeile ist anklickbar und schreibt den Befehl in die Chatzeile</li>
  *     <li>{@code /plot info [ID] [World]} – Infos zum Grundstück</li>
  *     <li>{@code /plot claim [ID]} – freies Grundstück kaufen ({@code bs.plot.claim})</li>
  *     <li>{@code /plot unclaim [ID] [reset]} – eigenes Grundstück freigeben, mit Erstattung ({@code bs.plot.unclaim})</li>
@@ -91,6 +94,8 @@ public final class PlotCommand {
         return Commands.literal("plot")
                 .requires(source -> source.getSender().hasPermission("bs.plot"))
                 .executes(PlotCommand::help)
+                .then(Commands.literal("help")
+                        .executes(PlotCommand::help))
                 .then(Commands.literal("info")
                         .executes(context -> info(context, null, null))
                         .then(idWithWorld((player, plot) -> true, false,
@@ -169,36 +174,49 @@ public final class PlotCommand {
 
     // ---------------------------------------------------------------- Unterbefehle
 
-    /** Zeigt die Unterbefehle an, die der Absender benutzen darf. */
+    /**
+     * Zeigt die Unterbefehle an, die der Absender benutzen darf ({@code /plot} bzw. {@code /plot help}).
+     * Jede Zeile ist anklickbar: Ein Klick schreibt den Befehl in die Chatzeile, ohne ihn abzuschicken –
+     * so lassen sich ID, Name usw. noch ergänzen.
+     */
     private static int help(CommandContext<CommandSourceStack> context) {
         CommandSender sender = context.getSource().getSender();
         Messages.send(sender, "help.header");
-        Messages.send(sender, "help.info");
+        helpLine(sender, "help.info", "/plot info ");
         if (sender.hasPermission("bs.plot.claim")) {
-            Messages.send(sender, "help.claim", Messages.arg("price", economy().format(config().getPlotPrice())));
+            helpLine(sender, "help.claim", "/plot claim ", Messages.arg("price", economy().format(config().getPlotPrice())));
         }
         if (sender.hasPermission("bs.plot.unclaim")) {
-            Messages.send(sender, "help.unclaim");
+            helpLine(sender, "help.unclaim", "/plot unclaim ");
         }
-        Messages.send(sender, "help.list");
+        helpLine(sender, "help.list", "/plot list");
         if (sender.hasPermission("bs.plot.home")) {
-            Messages.send(sender, "help.home");
-            Messages.send(sender, "help.home-set");
+            helpLine(sender, "help.home", "/plot home");
+            helpLine(sender, "help.home-set", "/plot home set");
         }
         if (sender.hasPermission("bs.plot.trust")) {
-            Messages.send(sender, "help.trust", Messages.arg("roles", plots().roleKeys()));
-            Messages.send(sender, "help.untrust");
+            helpLine(sender, "help.trust", "/plot trust ", Messages.arg("roles", plots().roleKeys()));
+            helpLine(sender, "help.untrust", "/plot untrust ");
         }
         String[][] staffLines = {
-                {"bs.plot.tp", "help.tp"}, {"bs.plot.list.others", "help.list-others"}, {"bs.plot.create", "help.create"},
-                {"bs.plot.remove", "help.remove"}, {"bs.plot.assign", "help.assign"}, {"bs.plot.unassign", "help.unassign"},
-                {"bs.plot.reset", "help.reset"}, {"bs.plot.snapshot", "help.snapshot"}};
+                {"bs.plot.tp", "help.tp", "/plot tp "}, {"bs.plot.list.others", "help.list-others", "/plot list "},
+                {"bs.plot.create", "help.create", "/plot create"}, {"bs.plot.remove", "help.remove", "/plot remove "},
+                {"bs.plot.assign", "help.assign", "/plot assign "}, {"bs.plot.unassign", "help.unassign", "/plot unassign "},
+                {"bs.plot.reset", "help.reset", "/plot reset "}, {"bs.plot.snapshot", "help.snapshot", "/plot snapshot "}};
         for (String[] line : staffLines) {
             if (sender.hasPermission(line[0])) {
-                Messages.send(sender, line[1]);
+                helpLine(sender, line[1], line[2]);
             }
         }
         return Command.SINGLE_SUCCESS;
+    }
+
+    /** Eine Hilfezeile, die beim Anklicken {@code command} in die Chatzeile schreibt (nicht abschickt). */
+    private static void helpLine(CommandSender sender, String key, String command, TagResolver... args) {
+        Component hint = Messages.get(sender, "help.click-hint", Messages.arg("command", command.strip()));
+        sender.sendMessage(Messages.get(sender, key, args)
+                .clickEvent(ClickEvent.suggestCommand(command))
+                .hoverEvent(HoverEvent.showText(hint)));
     }
 
     private static int info(CommandContext<CommandSourceStack> context, String plotId, World world) {

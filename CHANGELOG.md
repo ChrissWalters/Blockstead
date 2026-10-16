@@ -17,6 +17,8 @@ Language support: Blockstead speaks the language of the Minecraft client.
 - Roles in `config.yml` can have `aliases`; without `name`, the role name is shown translated.
 - The build checks that all language files have the same keys and placeholders.
 - Translations can be contributed through pull requests (only files in `src/main/resources/lang/`).
+- `/plot help` (besides `/plot`); every line of the help is clickable and puts the command into the chat line
+  without sending it, so the ID, name etc. can still be added.
 
 ### Changed
 - New default role keys: `owner`, `resident`, `builder`, `guest`. The previous keys (`besitzende`,

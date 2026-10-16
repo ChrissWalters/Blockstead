@@ -31,7 +31,7 @@ Hilfe und Meldungen kommen in deiner Sprache.
 
 | Befehl | Was er tut |
 |---|---|
-| `/plot` | Übersicht aller Befehle, die du nutzen darfst |
+| `/plot`, `/plot help` | Übersicht aller Befehle, die du nutzen darfst – eine Zeile anklicken schreibt den Befehl in den Chat, dann ID oder Name ergänzen und Enter drücken |
 | `/plot info [ID]` | Wem gehört das Grundstück, wer hat welche Rolle, ist es frei? |
 | `/plot claim [ID]` | Freies Grundstück kaufen |
 | `/plot list` | Deine Grundstücke |
