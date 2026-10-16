@@ -7,9 +7,9 @@ Diese Seite ist für Serverbetreibende und das Server-Team. Was Spielende wissen
 
 | Komponente | Version |
 |---|---|
-| Paper | 26.2 oder neuer |
+| Paper | 26.3 oder neuer |
 | Java | 25 |
-| WorldEdit | 7.4.x (getestet mit 7.4.6-beta-02) |
+| WorldEdit | 7.4.x (getestet mit 7.4.6) |
 | WorldGuard | 7.0.19 |
 | LuckPerms (optional) | 5.5.85 oder neuer – für Präfixe in Chat, Tab-Liste und über dem Kopf |
 
@@ -43,6 +43,20 @@ Grundstücke sind WorldGuard-Regionen mit der ID `plot_<Nummer>`:
 Neue Grundstücke haben keine Besitzenden. Spielende kaufen sie mit `/plot claim`, das Team vergibt sie
 mit `/plot assign`. Den Text beim Betreten setzt du mit der WorldGuard-Flag `region-name`, z.B.
 `/rg flag plot_3 region-name Willkommen bei Alex`.
+
+### Überlappungen und Stadtbereiche
+
+* **Grundstücke dürfen sich nicht überlappen.** `/plot create` lehnt eine Auswahl ab, die ein bestehendes
+  Grundstück berührt.
+* **Andere Regionen dürfen Grundstücke überlappen** – z.B. eine Stadtregion mit Straßen dazwischen. Sie
+  brauchen dafür eine **niedrigere Priorität** als die Grundstücke (Standard 10, `plots.priority`), am
+  einfachsten 0: Dann gelten auf den Grundstücken deren Besitzende, Rollen und Flags, auf den Straßen die
+  Regeln der Stadtregion. Bei gleicher oder höherer Priorität überstimmt die Stadtregion die Grundstücke –
+  `/plot create` warnt dann, Priorität ändern mit `/rg setpriority <ID> 0`.
+* Grundstücke **nicht** per `/rg setparent` unter eine Stadtregion hängen: Kinder erben in WorldGuard die
+  Mitglieder der Eltern-Region – alle Mitglieder der Stadt dürften dann auf jedem Grundstück bauen.
+* Beim Start meldet die Konsistenzprüfung überlappende Grundstücke und Regionen mit zu hoher Priorität im
+  Log (ohne etwas zu ändern).
 
 ## Team-Befehle
 

@@ -4,7 +4,7 @@ main: com.github.chrisswalters.blockstead.Blockstead
 description: CityBuild plots on WorldGuard/WorldEdit - claim, roles, homes, reset
 authors: [ChrissWalters]
 website: https://github.com/ChrissWalters/Blockstead
-api-version: '26.2'
+api-version: '26.3'
 depend: [WorldEdit, WorldGuard]
 # optional: Präfixe in Chat/Tab; wird vor Blockstead geladen, falls installiert
 softdepend: [LuckPerms]

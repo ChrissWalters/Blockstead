@@ -1,5 +1,14 @@
 # Änderungen
 
+## 1.0.1
+
+- `/plot create` lehnt eine Auswahl ab, die ein bestehendes Grundstück überlappt, und warnt, wenn eine andere
+  Region (z.B. eine Stadt) das neue Grundstück mit gleicher oder höherer Priorität überlappt.
+- Die Konsistenzprüfung beim Start meldet überlappende Grundstücke und Regionen mit zu hoher Priorität.
+- Doku: Abschnitt „Überlappungen und Stadtbereiche“ in `docs/admin.md`.
+- **Benötigt jetzt Paper 26.3** (statt 26.2): Unter 26.3 meldet die alte Abfrage der Unverwundbarkeit falsche
+  Werte, `/invincible` nutzt deshalb die neue Methode aus 26.3. Getestet mit WorldEdit 7.4.6.
+
 ## 1.0.0
 
 Erste öffentliche Version von **Blockstead** (vorher „Buildserver“) – ein CityBuild-Plugin für Paper 26.2.

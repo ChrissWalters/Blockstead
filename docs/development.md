@@ -26,7 +26,7 @@ LuckPerms-API) sind `compileOnly` – der Server stellt sie bereit, in der Jar s
 ./gradlew runServer
 ```
 
-Startet einen Paper-26.2-Server im Ordner `run/` mit dem Plugin sowie WorldEdit, WorldGuard und
+Startet einen Paper-26.3-Server im Ordner `run/` mit dem Plugin sowie WorldEdit, WorldGuard und
 LuckPerms. Beim ersten Start in `run/eula.txt` `eula=true` setzen und erneut starten. Verbinden mit
 `localhost`.
 

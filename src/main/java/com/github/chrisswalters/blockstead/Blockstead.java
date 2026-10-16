@@ -118,7 +118,7 @@ public final class Blockstead extends JavaPlugin {
                 new SnapshotService(getDataFolder()), pluginConfig, getLogger());
         try {
             LegacyFlagFix.runOnce(database, getLogger());
-            ConsistencyCheck.run(database, plotService, getLogger());
+            ConsistencyCheck.run(database, plotService, pluginConfig.getPlotPriority(), getLogger());
         } catch (DataException e) {
             // Korrektur/Prüfung sind nicht kritisch: loggen und normal weiterstarten
             getLogger().log(Level.SEVERE, e.getMessage(), e);

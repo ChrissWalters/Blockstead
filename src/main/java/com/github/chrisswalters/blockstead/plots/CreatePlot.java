@@ -19,13 +19,15 @@ import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import org.bukkit.entity.Player;
 
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * Legt Grundstücke (Plots) als WorldGuard-Regionen aus einer WorldEdit-Auswahl an.
  *
  * <p>Ein Plot reicht immer vom tiefsten bis zum höchsten Punkt der Welt, unabhängig von der Höhe
  * der Auswahl. Unterstützt werden Quader-Auswahlen ({@code //sel cuboid}) und Polygon-Auswahlen
- * ({@code //sel poly}). Neue Plots haben noch keine Besitzenden und Mitglieder. Direkt nach dem Anlegen
+ * ({@code //sel poly}). Überlappungen mit anderen Grundstücken werden abgelehnt, bei anderen Regionen mit zu
+ * hoher Priorität gibt es eine Warnung ({@link PlotOverlaps}). Neue Plots haben noch keine Besitzenden und Mitglieder. Direkt nach dem Anlegen
  * wird der Zustand gesichert ({@link SnapshotService}), damit das Grundstück später zurückgesetzt werden kann.
  */
 public class CreatePlot {
@@ -77,6 +79,14 @@ public class CreatePlot {
             return false;
         }
 
+        // Grundstücke dürfen sich nicht überlappen (siehe PlotOverlaps)
+        List<ProtectedRegion> overlapping = PlotOverlaps.overlappingPlots(plot, regionManager);
+        if (!overlapping.isEmpty()) {
+            player.sendMessage("Die Auswahl überlappt " + PlotOverlaps.describe(overlapping, false)
+                    + ". Grundstücke dürfen sich nicht überlappen – bitte die Auswahl anpassen.");
+            return false;
+        }
+
         PluginConfig config = Blockstead.getPluginConfig();
         plot.setFlags(new HashMap<>(config.getDefaultPlotFlags()));
         if (Blockstead.REGIONNAME != null) {
@@ -86,6 +96,12 @@ public class CreatePlot {
         regionManager.addRegion(plot);
 
         player.sendMessage("Grundstück " + plotId + " wurde angelegt.");
+        List<ProtectedRegion> conflicting = PlotOverlaps.conflictingRegions(plot, regionManager, config.getPlotPriority());
+        if (!conflicting.isEmpty()) {
+            player.sendMessage("Achtung: " + PlotOverlaps.describe(conflicting, true) + " überlappt das Grundstück mit "
+                    + "gleicher oder höherer Priorität und überstimmt dort Besitzende und Flags. Priorität dieser Region(en) "
+                    + "unter " + config.getPlotPriority() + " setzen, z.B. /rg setpriority <ID> 0.");
+        }
         // Zustand beim Anlegen sichern, damit das Grundstück beim Freigeben zurückgesetzt werden kann
         Blockstead.getPlotService().saveSnapshot(player, new Plot(BukkitAdapter.adapt(selectionWorld), plot));
         Blockstead.getInstance().getLogger().info("Grundstück " + plotId + " in Welt " + selectionWorld.getName()

@@ -57,7 +57,8 @@ public final class InvincibleCommand {
     }
 
     private static void toggle(CommandSender sender, Player target) {
-        boolean invulnerable = !target.isInvulnerable();
+        // Ab Paper 26.3: isMarkedInvulnerable() liefert den mit setInvulnerable() gesetzten Zustand
+        boolean invulnerable = !target.isMarkedInvulnerable();
         target.setInvulnerable(invulnerable);
         String state = invulnerable ? "aktiviert" : "deaktiviert";
 

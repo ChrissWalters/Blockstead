@@ -30,7 +30,7 @@ body:
     attributes:
       label: Paper-, WorldEdit- und WorldGuard-Version
       description: "Paper: /version · WorldEdit: /we version · WorldGuard: /wg version"
-      placeholder: "Paper 26.2-133, WorldEdit 7.4.6, WorldGuard 7.0.19"
+      placeholder: "Paper 26.3-200, WorldEdit 7.4.6, WorldGuard 7.0.19"
     validations:
       required: true
   - type: input
