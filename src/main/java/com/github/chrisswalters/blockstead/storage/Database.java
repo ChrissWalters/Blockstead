@@ -53,9 +53,9 @@ public class Database implements AutoCloseable {
                 // Datenbank stammt von einer neueren Plugin-Version (z.B. alte .jar zurückgespielt):
                 // nichts anfassen, sonst könnten Daten verloren gehen
                 connection.close();
-                throw new SQLException("Die Datenbank hat Version " + version + ", diese Plugin-Version kennt nur bis "
-                        + SCHEMA_VERSION + ". Bitte die neuere Plugin-Version verwenden oder eine passende Sicherung "
-                        + "aus plugins/Blockstead/backups/ zurückspielen.");
+                throw new SQLException("The database has version " + version + ", this plugin version only knows up to "
+                        + SCHEMA_VERSION + ". Please use the newer plugin version or restore a matching backup "
+                        + "from plugins/Blockstead/backups/.");
             }
 
             if (version < 1) {
@@ -87,7 +87,7 @@ public class Database implements AutoCloseable {
             }
 
             if (version < 3) {
-                // Rollen unterhalb von "besitzende"; die Person ist zusätzlich WorldGuard-Mitglied
+                // Rollen unterhalb von "owner" (Besitzende); die Person ist zusätzlich WorldGuard-Mitglied
                 statement.execute("CREATE TABLE plot_roles ("
                         + "world TEXT NOT NULL, "
                         + "plot_id TEXT NOT NULL, "
@@ -118,7 +118,7 @@ public class Database implements AutoCloseable {
                 return result.next() ? result.getString(1) : null;
             }
         } catch (SQLException e) {
-            throw new DataException("Merker '" + key + "' konnte nicht gelesen werden", e);
+            throw new DataException("Could not read marker '" + key + "'", e);
         }
     }
 
@@ -129,7 +129,7 @@ public class Database implements AutoCloseable {
             statement.setString(2, value);
             statement.executeUpdate();
         } catch (SQLException e) {
-            throw new DataException("Merker '" + key + "' konnte nicht gespeichert werden", e);
+            throw new DataException("Could not save marker '" + key + "'", e);
         }
     }
 

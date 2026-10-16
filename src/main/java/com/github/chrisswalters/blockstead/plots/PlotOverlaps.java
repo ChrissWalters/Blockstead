@@ -61,11 +61,11 @@ public final class PlotOverlaps {
         return region.getIntersectingRegions(candidates);
     }
 
-    /** IDs mit Priorität für Meldungen, z.B. "stadt (Priorität 10)". */
+    /** IDs (optional mit Priorität) für Meldungen, z.B. "stadt (10)" – sprachneutral. */
     public static String describe(List<ProtectedRegion> regions, boolean withPriority) {
         List<String> parts = new ArrayList<>();
         for (ProtectedRegion region : regions) {
-            parts.add(withPriority ? region.getId() + " (Priorität " + region.getPriority() + ")" : region.getId());
+            parts.add(withPriority ? region.getId() + " (" + region.getPriority() + ")" : region.getId());
         }
         return String.join(", ", parts);
     }

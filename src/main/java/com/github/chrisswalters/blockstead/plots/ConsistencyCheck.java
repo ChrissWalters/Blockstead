@@ -44,15 +44,15 @@ public final class ConsistencyCheck {
                     }
                 }
             } catch (SQLException e) {
-                throw new DataException("Konsistenzprüfung fehlgeschlagen", e);
+                throw new DataException("Consistency check failed", e);
             }
         }
         if (problems.isEmpty()) {
-            log.info("Konsistenzprüfung: Datenbank passt zu den WorldGuard-Regionen.");
+            log.info("Consistency check: database matches the WorldGuard regions.");
             return;
         }
-        log.warning("Konsistenzprüfung: " + problems.size() + " Eintrag/Einträge zu Grundstücken, die es in WorldGuard nicht gibt "
-                + "(es wurde nichts gelöscht):");
+        log.warning("Consistency check: " + problems.size() + " entry/entries for plots that do not exist in WorldGuard "
+                + "(nothing was deleted):");
         problems.forEach(problem -> log.warning("  - " + problem));
     }
 
@@ -71,22 +71,22 @@ public final class ConsistencyCheck {
                 for (ProtectedRegion other : PlotOverlaps.overlappingPlots(plot.region(), manager)) {
                     // Jedes Paar nur einmal melden
                     if (plot.id().compareTo(other.getId()) < 0) {
-                        problems.add(plot.id() + " und " + other.getId() + " in " + world.getName()
-                                + " überlappen sich – eins davon verkleinern oder löschen");
+                        problems.add(plot.id() + " and " + other.getId() + " in " + world.getName()
+                                + " overlap – shrink or delete one of them");
                     }
                 }
                 List<ProtectedRegion> conflicting = PlotOverlaps.conflictingRegions(plot.region(), manager, plotPriority);
                 if (!conflicting.isEmpty()) {
-                    problems.add(PlotOverlaps.describe(conflicting, true) + " überlappt " + plot.id() + " in " + world.getName()
-                            + " mit zu hoher Priorität (Grundstücke: " + plot.region().getPriority() + ")");
+                    problems.add(PlotOverlaps.describe(conflicting, true) + " overlaps " + plot.id() + " in " + world.getName()
+                            + " with a too high priority (plots: " + plot.region().getPriority() + ")");
                 }
             }
         }
         if (problems.isEmpty()) {
-            log.info("Konsistenzprüfung: keine problematischen Überlappungen von Grundstücken.");
+            log.info("Consistency check: no problematic plot overlaps.");
             return;
         }
-        log.warning("Konsistenzprüfung: " + problems.size() + " Problem(e) mit Überlappungen (es wurde nichts geändert):");
+        log.warning("Consistency check: " + problems.size() + " overlap problem(s) (nothing was changed):");
         problems.forEach(problem -> log.warning("  - " + problem));
     }
 }

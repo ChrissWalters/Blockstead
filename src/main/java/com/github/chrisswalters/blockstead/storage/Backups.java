@@ -65,16 +65,16 @@ public final class Backups {
                             target.resolve("worldguard").resolve(world.getName()).resolve("regions.yml"));
                 }
                 if (regionFiles == 0) {
-                    log.warning("Keine WorldGuard-Regionsdateien gefunden (speichert WorldGuard in MySQL?) – "
-                            + "die Regionen werden nicht mitgesichert, bitte separat sichern.");
+                    log.warning("No WorldGuard region files found (does WorldGuard store regions in MySQL?) – "
+                            + "regions are not backed up, please back them up separately.");
                 }
                 files += regionFiles;
             }
 
-            log.info("Sicherung angelegt: " + plugin.getDataFolder().getName() + "/backups/" + target.getFileName() + " (" + files + " Dateien)");
+            log.info("Backup created: " + plugin.getDataFolder().getName() + "/backups/" + target.getFileName() + " (" + files + " files)");
             prune(backupRoot, Math.max(1, keep), log);
         } catch (IOException e) {
-            log.severe("Sicherung beim Start fehlgeschlagen: " + e.getMessage());
+            log.severe("Startup backup failed: " + e.getMessage());
         }
     }
 
@@ -100,7 +100,7 @@ public final class Backups {
                     Files.delete(path);
                 }
             }
-            log.info("Alte Sicherung gelöscht: " + old.getFileName());
+            log.info("Old backup deleted: " + old.getFileName());
         }
     }
 }

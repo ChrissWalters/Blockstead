@@ -32,7 +32,7 @@ public record Plot(World world, ProtectedRegion region) {
         return region.getOwners().getUniqueIds();
     }
 
-    /** UUIDs aller Mitglieder (alle Rollen unterhalb von "besitzende"). */
+    /** UUIDs aller Mitglieder (alle Rollen unterhalb von "owner" (Besitzende)). */
     public Set<UUID> memberIds() {
         return region.getMembers().getUniqueIds();
     }

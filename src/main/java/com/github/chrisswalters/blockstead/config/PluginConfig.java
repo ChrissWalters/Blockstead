@@ -18,8 +18,10 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -33,6 +35,8 @@ import java.util.logging.Logger;
  */
 public class PluginConfig {
 
+    private final String language;
+    private final String fallbackLanguage;
     private final boolean displayEnabled;
     private final String chatFormat;
     private final String tabFormat;
@@ -51,10 +55,12 @@ public class PluginConfig {
     private final Map<Flag<?>, Object> defaultPlotFlags;
     private final Map<String, PlotRole> roles;
 
-    private PluginConfig(boolean displayEnabled, String chatFormat, String tabFormat, boolean tabSorting, boolean nametag,
+    private PluginConfig(String language, String fallbackLanguage, boolean displayEnabled, String chatFormat, String tabFormat, boolean tabSorting, boolean nametag,
                          List<Component> joinInfo, String announcePrefix, boolean announceTitle, boolean announceSound,
                          boolean backupsEnabled, int backupsKeep, boolean importOldBalances, long plotPrice,
                          int resetCooldownMinutes, int plotPriority, Map<Flag<?>, Object> defaultPlotFlags, Map<String, PlotRole> roles) {
+        this.language = language;
+        this.fallbackLanguage = fallbackLanguage;
         this.displayEnabled = displayEnabled;
         this.chatFormat = chatFormat;
         this.tabFormat = tabFormat;
@@ -83,6 +89,8 @@ public class PluginConfig {
         FileConfiguration config = plugin.getConfig();
         Logger log = plugin.getLogger();
 
+        String language = config.getString("language", "auto");
+        String fallbackLanguage = config.getString("fallback-language", "en");
         boolean displayEnabled = config.getBoolean("display.enabled", true);
         String chatFormat = config.getString("display.chat-format", "{prefix}{name}{suffix}: {message}");
         String tabFormat = config.getString("display.tab-format", "{prefix}{name}{suffix}");
@@ -101,9 +109,9 @@ public class PluginConfig {
         int priority = config.getInt("plots.priority", 10);
         Map<Flag<?>, Object> flags = parseFlags(config.getConfigurationSection("plots.default-flags"), log);
         Map<String, PlotRole> roles = parseRoles(config.getConfigurationSection("roles"), log);
-        log.info("Konfiguration geladen: Grundstückspreis " + plotPrice + ", Grundstücks-Priorität " + priority + ", " + flags.size()
-                + " Standard-Flags, Rollen " + roles.keySet());
-        return new PluginConfig(displayEnabled, chatFormat, tabFormat, tabSorting, nametag,
+        log.info("Configuration loaded: plot price " + plotPrice + ", plot priority " + priority + ", " + flags.size()
+                + " default flags, roles " + roles.keySet());
+        return new PluginConfig(language, fallbackLanguage, displayEnabled, chatFormat, tabFormat, tabSorting, nametag,
                 joinInfo, announcePrefix, announceTitle, announceSound,
                 backupsEnabled, backupsKeep, importOldBalances, plotPrice,
                 resetCooldownMinutes, priority, flags, roles);
@@ -112,7 +120,7 @@ public class PluginConfig {
     /** Negative Beträge sind nicht erlaubt und werden mit Warnung durch 0 ersetzt. */
     private static long nonNegative(long value, String key, Logger log) {
         if (value < 0) {
-            log.warning("config.yml: '" + key + "' darf nicht negativ sein, verwende 0.");
+            log.warning("config.yml: '" + key + "' must not be negative, using 0.");
             return 0;
         }
         return value;
@@ -124,21 +132,34 @@ public class PluginConfig {
         if (section == null) {
             return roles;
         }
+        Set<String> taken = new HashSet<>();
         for (String key : section.getKeys(false)) {
-            if (!key.matches("[a-z0-9_-]+") || key.equals(PlotRole.OWNER_KEY)) {
-                log.warning("config.yml: Rolle '" + key + "' wird ignoriert (ungültiger oder reservierter Schlüssel).");
+            if (!key.matches("[a-z0-9_-]+") || PlotRole.isOwnerKey(key) || taken.contains(key)) {
+                log.warning("config.yml: role '" + key + "' ignored (invalid, reserved or already used key).");
                 continue;
             }
-            String displayName = section.getString(key + ".name", key);
+            // Ohne name: Anzeigename aus der Sprachdatei (role.<key>)
+            String displayName = section.getString(key + ".name");
             Set<PlotRight> rights = EnumSet.noneOf(PlotRight.class);
             for (String right : section.getStringList(key + ".rights")) {
                 try {
-                    rights.add(PlotRight.valueOf(right.toUpperCase()));
+                    rights.add(PlotRight.valueOf(right.toUpperCase(Locale.ROOT)));
                 } catch (IllegalArgumentException e) {
-                    log.warning("config.yml: unbekanntes Recht '" + right + "' bei Rolle '" + key + "' wird ignoriert.");
+                    log.warning("config.yml: unknown right '" + right + "' in role '" + key + "' ignored.");
                 }
             }
-            roles.put(key, new PlotRole(key, displayName, Collections.unmodifiableSet(rights)));
+            Set<String> aliases = new HashSet<>();
+            for (String alias : section.getStringList(key + ".aliases")) {
+                String normalized = alias.toLowerCase(Locale.ROOT);
+                if (PlotRole.isOwnerKey(normalized) || taken.contains(normalized) || section.contains(normalized)) {
+                    log.warning("config.yml: alias '" + alias + "' of role '" + key + "' ignored (already used).");
+                } else {
+                    aliases.add(normalized);
+                }
+            }
+            taken.add(key);
+            taken.addAll(aliases);
+            roles.put(key, new PlotRole(key, displayName, Collections.unmodifiableSet(rights), Set.copyOf(aliases)));
         }
         return roles;
     }
@@ -153,22 +174,32 @@ public class PluginConfig {
         for (String name : section.getKeys(false)) {
             Flag<?> flag = registry.get(name);
             if (flag == null) {
-                log.warning("config.yml: unbekannte WorldGuard-Flag '" + name + "' wird ignoriert.");
+                log.warning("config.yml: unknown WorldGuard flag '" + name + "' ignored.");
                 continue;
             }
             String input = section.getString(name);
             if (isMemberBlockingFlag(flag)) {
-                log.warning("config.yml: Flag '" + name + "' in plots.default-flags wird ignoriert – sie würde auch Besitzende "
-                        + "und Mitglieder aussperren. Fremde sperrt WorldGuard ohnehin aus. Bitte aus der config.yml entfernen.");
+                log.warning("config.yml: Flag '" + name + "' in plots.default-flags ignored – it would lock out owners and "
+                        + "members too. WorldGuard keeps strangers out anyway. Please remove it from config.yml.");
                 continue;
             }
             try {
                 flags.put(flag, flag.parseInput(FlagContext.create().setInput(input).build()));
             } catch (InvalidFlagFormat e) {
-                log.warning("config.yml: ungültiger Wert '" + input + "' für Flag '" + name + "' wird ignoriert (" + e.getMessage() + ").");
+                log.warning("config.yml: invalid value '" + input + "' for flag '" + name + "' ignored (" + e.getMessage() + ").");
             }
         }
         return flags;
+    }
+
+    /** {@code auto} (Sprache des Minecraft-Clients) oder ein fester Sprachcode für alle (Dateiname unter {@code lang/}). */
+    public String getLanguage() {
+        return language;
+    }
+
+    /** Sprache für die Konsole und für Client-Sprachen ohne eigene Datei (Standard {@code en}). */
+    public String getFallbackLanguage() {
+        return fallbackLanguage;
     }
 
     /** Ob Chat, Tab-Liste und Nametag mit LuckPerms-Präfixen gestaltet werden (nur mit LuckPerms). */
@@ -252,9 +283,19 @@ public class PluginConfig {
         return plotPriority;
     }
 
-    /** Rollen unterhalb von "besitzende", nach Schlüssel, in der Reihenfolge der config.yml. */
+    /** Rollen unterhalb von "owner" (Besitzende), nach Schlüssel, in der Reihenfolge der config.yml. */
     public Map<String, PlotRole> getRoles() {
         return roles;
+    }
+
+    /** Rolle zu einem Schlüssel oder Alias (Groß-/Kleinschreibung egal); {@code null}, wenn es keine gibt. */
+    public PlotRole findRole(String keyOrAlias) {
+        for (PlotRole role : roles.values()) {
+            if (role.matches(keyOrAlias)) {
+                return role;
+            }
+        }
+        return null;
     }
 
     /** Flags für neue Grundstücke (nicht veränderbar; vor dem Setzen ggf. kopieren). */

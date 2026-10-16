@@ -92,16 +92,16 @@ public class EconomyService {
     /** Eine Log-Zeile, über welches Economy-Plugin die Währung läuft – oder eine Warnung, wenn keins da ist. */
     public void logStatus(Logger log) {
         if (!vaultPresent) {
-            log.warning("Vault ist nicht installiert – Grundstücke können nicht gekauft werden (Zuweisen durch das Team geht).");
+            log.warning("Vault is not installed – plots cannot be bought (staff can still assign them).");
         } else if (!VaultEconomy.isAvailable()) {
-            log.warning("Vault ist installiert, aber kein Economy-Plugin (z.B. EssentialsX) ist aktiv – "
-                    + "Grundstücke können nicht gekauft werden (Zuweisen durch das Team geht).");
+            log.warning("Vault is installed, but no economy plugin (e.g. EssentialsX) is active – "
+                    + "plots cannot be bought (staff can still assign them).");
         } else {
-            log.info("Server-Währung über Vault: " + VaultEconomy.providerName());
+            log.info("Server currency through Vault: " + VaultEconomy.providerName());
         }
     }
 
     private static Transaction unavailable() {
-        return Transaction.failed("kein Economy-Plugin über Vault erreichbar");
+        return Transaction.failed("no economy plugin available through Vault");
     }
 }

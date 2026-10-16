@@ -1,9 +1,13 @@
 package com.github.chrisswalters.blockstead.roles;
 
 import com.github.chrisswalters.blockstead.config.PluginConfig;
+import com.github.chrisswalters.blockstead.lang.Messages;
 import com.github.chrisswalters.blockstead.plots.Plot;
 import com.github.chrisswalters.blockstead.storage.DataException;
 import com.github.chrisswalters.blockstead.storage.Database;
+
+import net.kyori.adventure.text.Component;
+import org.bukkit.command.CommandSender;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,7 +18,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Gespeicherte Rollen unterhalb von "besitzende" (Tabelle {@code plot_roles}).
+ * Gespeicherte Rollen unterhalb von "owner" (Besitzende) (Tabelle {@code plot_roles}).
  *
  * <p>Wer eine solche Rolle hat, ist zusätzlich WorldGuard-Mitglied des Grundstücks; WorldGuard sperrt
  * so alle Fremden aus, und das Plugin schränkt Mitglieder je nach Rolle weiter ein. Weil der
@@ -42,7 +46,7 @@ public class RoleService {
                         .put(UUID.fromString(result.getString(3)), result.getString(4));
             }
         } catch (SQLException e) {
-            throw new DataException("Rollen konnten nicht geladen werden", e);
+            throw new DataException("Could not load roles", e);
         }
     }
 
@@ -62,18 +66,19 @@ public class RoleService {
         if (roleKey == null) {
             return true;
         }
-        PlotRole role = config.getRoles().get(roleKey);
+        // findRole kennt auch Aliase – z.B. gespeicherte deutsche Schlüssel aus Blockstead 2.0
+        PlotRole role = config.findRole(roleKey);
         return role != null && role.has(right);
     }
 
-    /** Anzeigename der Rolle eines Mitglieds, z.B. "Gast". */
-    public String describeMember(Plot plot, UUID uuid) {
+    /** Anzeigename der Rolle eines Mitglieds für den Empfänger, z.B. "Gast" oder "Guest". */
+    public Component describeMember(Plot plot, UUID uuid, CommandSender recipient) {
         String roleKey = getRoleKey(plot, uuid);
         if (roleKey == null) {
-            return "Mitglied mit allen Rechten";
+            return Messages.get(recipient, "role.member-all-rights");
         }
-        PlotRole role = config.getRoles().get(roleKey);
-        return role != null ? role.displayName() : roleKey + " (unbekannte Rolle, keine Rechte)";
+        PlotRole role = config.findRole(roleKey);
+        return role != null ? role.displayName(recipient) : Messages.get(recipient, "role.unknown", Messages.arg("key", roleKey));
     }
 
     /** Speichert die Rolle der Person auf dem Grundstück (ersetzt eine vorhandene). */
@@ -86,7 +91,7 @@ public class RoleService {
             statement.setString(4, roleKey);
             statement.executeUpdate();
         } catch (SQLException e) {
-            throw new DataException("Rolle konnte nicht gespeichert werden", e);
+            throw new DataException("Could not save role", e);
         }
         cache.computeIfAbsent(key(plot), k -> new HashMap<>()).put(uuid, roleKey);
     }
@@ -100,7 +105,7 @@ public class RoleService {
             statement.setString(3, uuid.toString());
             statement.executeUpdate();
         } catch (SQLException e) {
-            throw new DataException("Rolle konnte nicht entfernt werden", e);
+            throw new DataException("Could not remove role", e);
         }
         Map<UUID, String> roles = cache.get(key(plot));
         if (roles != null) {
@@ -116,7 +121,7 @@ public class RoleService {
             statement.setString(2, plot.id());
             statement.executeUpdate();
         } catch (SQLException e) {
-            throw new DataException("Rollen konnten nicht gelöscht werden", e);
+            throw new DataException("Could not delete roles", e);
         }
         cache.remove(key(plot));
     }

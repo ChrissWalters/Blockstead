@@ -3,6 +3,7 @@ package com.github.chrisswalters.blockstead.commands;
 import com.github.chrisswalters.blockstead.Blockstead;
 import com.github.chrisswalters.blockstead.config.PluginConfig;
 import com.github.chrisswalters.blockstead.economy.EconomyService;
+import com.github.chrisswalters.blockstead.lang.Messages;
 import com.github.chrisswalters.blockstead.plots.CreatePlot;
 import com.github.chrisswalters.blockstead.plots.HomeService;
 import com.github.chrisswalters.blockstead.plots.Plot;
@@ -10,7 +11,6 @@ import com.github.chrisswalters.blockstead.plots.PlotService;
 import com.github.chrisswalters.blockstead.roles.PlotRight;
 import com.github.chrisswalters.blockstead.util.PlayerLookup;
 import com.mojang.brigadier.Command;
-import com.mojang.brigadier.LiteralMessage;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
@@ -21,7 +21,9 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.Component;
 import io.papermc.paper.command.brigadier.Commands;
+import io.papermc.paper.command.brigadier.MessageComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
@@ -44,31 +46,31 @@ import java.util.stream.Collectors;
  * <p>Für alle (Recht {@code bs.plot} bzw. eigene Unterrechte mit Standard "alle"):
  * <ul>
  *     <li>{@code /plot} – Hilfe</li>
- *     <li>{@code /plot info [ID] [Welt]} – Infos zum Grundstück</li>
+ *     <li>{@code /plot info [ID] [World]} – Infos zum Grundstück</li>
  *     <li>{@code /plot claim [ID]} – freies Grundstück kaufen ({@code bs.plot.claim})</li>
  *     <li>{@code /plot unclaim [ID] [reset]} – eigenes Grundstück freigeben, mit Erstattung ({@code bs.plot.unclaim})</li>
  *     <li>{@code /plot list} – eigene Grundstücke</li>
  *     <li>{@code /plot home} – zum eigenen Home teleportieren ({@code bs.plot.home})</li>
  *     <li>{@code /plot home set} – Home an der aktuellen Position setzen; nur auf Grundstücken, die man
  *     besitzt oder auf denen man eine Rolle mit Home-Recht hat ({@code bs.plot.home})</li>
- *     <li>{@code /plot trust <Name> <Rolle> [ID] [Welt]} – Rolle auf einem eigenen Grundstück vergeben ({@code bs.plot.trust})</li>
- *     <li>{@code /plot untrust <Name> [ID] [Welt]} – Rolle entziehen ({@code bs.plot.trust})</li>
+ *     <li>{@code /plot trust <Name> <Role> [ID] [World]} – Rolle auf einem eigenen Grundstück vergeben ({@code bs.plot.trust})</li>
+ *     <li>{@code /plot untrust <Name> [ID] [World]} – Rolle entziehen ({@code bs.plot.trust})</li>
  * </ul>
  * Mit {@code bs.plot.trust.others} gehen trust/untrust auch auf fremden Grundstücken.
  * Für das Team:
  * <ul>
  *     <li>{@code /plot list <Name>} – Grundstücke einer anderen Person ({@code bs.plot.list.others})</li>
  *     <li>{@code /plot create} – Grundstück aus der WorldEdit-Auswahl anlegen ({@code bs.plot.create})</li>
- *     <li>{@code /plot remove <ID> [Welt] [reset]} – Grundstück löschen ({@code bs.plot.remove})</li>
- *     <li>{@code /plot assign <ID> <Name> [Welt]} – freies Grundstück kostenlos zuweisen ({@code bs.plot.assign})</li>
- *     <li>{@code /plot unassign <ID> [Welt] [reset]} – beliebiges Grundstück freigeben ({@code bs.plot.unassign})</li>
- *     <li>{@code /plot reset [ID] [Welt]} – auf die Sicherung zurücksetzen, Besitz und Rollen bleiben ({@code bs.plot.reset})</li>
- *     <li>{@code /plot snapshot <ID> [Welt]} – aktuellen Zustand als Sicherung zum Zurücksetzen speichern ({@code bs.plot.snapshot})</li>
- *     <li>{@code /plot tp <ID> [Welt]} (Alias {@code teleport}) – zu einem Grundstück teleportieren ({@code bs.plot.tp})</li>
+ *     <li>{@code /plot remove <ID> [World] [reset]} – Grundstück löschen ({@code bs.plot.remove})</li>
+ *     <li>{@code /plot assign <ID> <Name> [World]} – freies Grundstück kostenlos zuweisen ({@code bs.plot.assign})</li>
+ *     <li>{@code /plot unassign <ID> [World] [reset]} – beliebiges Grundstück freigeben ({@code bs.plot.unassign})</li>
+ *     <li>{@code /plot reset [ID] [World]} – auf die Sicherung zurücksetzen, Besitz und Rollen bleiben ({@code bs.plot.reset})</li>
+ *     <li>{@code /plot snapshot <ID> [World]} – aktuellen Zustand als Sicherung zum Zurücksetzen speichern ({@code bs.plot.snapshot})</li>
+ *     <li>{@code /plot tp <ID> [World]} (Alias {@code teleport}) – zu einem Grundstück teleportieren ({@code bs.plot.tp})</li>
  * </ul>
  * {@code reset} setzt den Inhalt auf die Sicherung vom Anlegen zurück (mit Sicherheitsabfrage), sonst
  * bleibt alles Gebaute stehen. Ohne {@code [ID]} gilt das Grundstück, auf dem die ausführende Person
- * steht. {@code [Welt]} ist im Spiel optional (Standard: eigene Welt) und aus der Konsole Pflicht.
+ * steht. {@code [World]} ist im Spiel optional (Standard: eigene Welt) und aus der Konsole Pflicht.
  * Aus der Konsole gehen info, trust, untrust, remove, assign, unassign, reset, snapshot und list &lt;Name&gt;;
  * Befehle für die eigene Person (claim, unclaim, home, tp, create) nur im Spiel.
  *
@@ -122,7 +124,7 @@ public final class PlotCommand {
                         .requires(source -> source.getSender().hasPermission("bs.plot.trust"))
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .suggests(PlayerLookup::suggestOnlineNames)
-                                .then(Commands.argument("rolle", StringArgumentType.word())
+                                .then(Commands.argument("role", StringArgumentType.word())
                                         .suggests(PlotCommand::suggestRoles)
                                         .executes(context -> trust(context, null, null))
                                         .then(idWithWorld(PlotCommand::canManage, false,
@@ -170,47 +172,31 @@ public final class PlotCommand {
     /** Zeigt die Unterbefehle an, die der Absender benutzen darf. */
     private static int help(CommandContext<CommandSourceStack> context) {
         CommandSender sender = context.getSource().getSender();
-        sender.sendMessage("Grundstücks-Befehle ([ID] weglassen = Grundstück, auf dem du stehst; "
-                + "[Welt] nur für andere Welten oder aus der Konsole):");
-        sender.sendMessage("/plot info [ID] [Welt] – Infos zum Grundstück");
+        Messages.send(sender, "help.header");
+        Messages.send(sender, "help.info");
         if (sender.hasPermission("bs.plot.claim")) {
-            sender.sendMessage("/plot claim [ID] – freies Grundstück kaufen (" + economy().format(config().getPlotPrice()) + ")");
+            Messages.send(sender, "help.claim", Messages.arg("price", economy().format(config().getPlotPrice())));
         }
         if (sender.hasPermission("bs.plot.unclaim")) {
-            sender.sendMessage("/plot unclaim [ID] [reset] – eigenes Grundstück freigeben (mit Erstattung; reset = auf Zustand beim Anlegen zurücksetzen)");
+            Messages.send(sender, "help.unclaim");
         }
-        sender.sendMessage("/plot list – deine Grundstücke");
+        Messages.send(sender, "help.list");
         if (sender.hasPermission("bs.plot.home")) {
-            sender.sendMessage("/plot home – zu deinem Home teleportieren");
-            sender.sendMessage("/plot home set – Home hier setzen (auf deinem Grundstück)");
+            Messages.send(sender, "help.home");
+            Messages.send(sender, "help.home-set");
         }
         if (sender.hasPermission("bs.plot.trust")) {
-            sender.sendMessage("/plot trust <Name> <Rolle> [ID] [Welt] – Rolle vergeben (" + plots().roleKeys() + ")");
-            sender.sendMessage("/plot untrust <Name> [ID] [Welt] – Rolle entziehen");
+            Messages.send(sender, "help.trust", Messages.arg("roles", plots().roleKeys()));
+            Messages.send(sender, "help.untrust");
         }
-        if (sender.hasPermission("bs.plot.tp")) {
-            sender.sendMessage("/plot tp <ID> [Welt] – zu einem Grundstück teleportieren");
-        }
-        if (sender.hasPermission("bs.plot.list.others")) {
-            sender.sendMessage("/plot list <Name> – Grundstücke einer anderen Person");
-        }
-        if (sender.hasPermission("bs.plot.create")) {
-            sender.sendMessage("/plot create – Grundstück aus der WorldEdit-Auswahl anlegen");
-        }
-        if (sender.hasPermission("bs.plot.remove")) {
-            sender.sendMessage("/plot remove <ID> [Welt] [reset] – Grundstück löschen");
-        }
-        if (sender.hasPermission("bs.plot.assign")) {
-            sender.sendMessage("/plot assign <ID> <Name> [Welt] – freies Grundstück kostenlos zuweisen");
-        }
-        if (sender.hasPermission("bs.plot.unassign")) {
-            sender.sendMessage("/plot unassign <ID> [Welt] [reset] – Grundstück freigeben");
-        }
-        if (sender.hasPermission("bs.plot.reset")) {
-            sender.sendMessage("/plot reset [ID] [Welt] – Grundstück auf die Sicherung zurücksetzen (Besitz bleibt)");
-        }
-        if (sender.hasPermission("bs.plot.snapshot")) {
-            sender.sendMessage("/plot snapshot <ID> [Welt] – aktuellen Zustand als Sicherung zum Zurücksetzen speichern");
+        String[][] staffLines = {
+                {"bs.plot.tp", "help.tp"}, {"bs.plot.list.others", "help.list-others"}, {"bs.plot.create", "help.create"},
+                {"bs.plot.remove", "help.remove"}, {"bs.plot.assign", "help.assign"}, {"bs.plot.unassign", "help.unassign"},
+                {"bs.plot.reset", "help.reset"}, {"bs.plot.snapshot", "help.snapshot"}};
+        for (String[] line : staffLines) {
+            if (sender.hasPermission(line[0])) {
+                Messages.send(sender, line[1]);
+            }
         }
         return Command.SINGLE_SUCCESS;
     }
@@ -221,24 +207,25 @@ public final class PlotCommand {
             Plot plot = findPlot(sender, plotId, world);
             if (plot == null) return false;
 
-            sender.sendMessage("Grundstück " + plot.id() + " (Welt " + plot.world().getName() + ")");
+            Messages.send(sender, "info.header", Messages.arg("id", plot.id()), Messages.arg("world", plot.world().getName()));
             if (plot.isFree()) {
-                sender.sendMessage("Status: frei – kaufen mit /plot claim " + plot.id()
-                        + " für " + economy().format(config().getPlotPrice()));
+                Messages.send(sender, "info.free", Messages.arg("id", plot.id()),
+                        Messages.arg("price", economy().format(config().getPlotPrice())));
             } else {
-                sender.sendMessage("Besitzende: " + names(plot.ownerIds().stream().toList()));
+                Messages.send(sender, "info.owners", Messages.arg("names", names(plot.ownerIds().stream().toList())));
                 for (UUID member : plot.memberIds()) {
-                    sender.sendMessage("- " + PlayerLookup.nameOf(member) + ": " + plots().describeRole(plot, member));
+                    Messages.send(sender, "info.member", Messages.arg("name", PlayerLookup.nameOf(member)),
+                            Messages.arg("role", plots().describeRole(plot, member, sender)));
                 }
                 if (sender instanceof Player player) {
-                    String ownRole = plots().describeRole(plot, player.getUniqueId());
+                    Component ownRole = plots().describeRole(plot, player.getUniqueId(), sender);
                     if (ownRole != null) {
-                        sender.sendMessage("Deine Rolle: " + ownRole);
+                        Messages.send(sender, "info.own-role", Messages.arg("role", ownRole));
                     }
                 }
             }
             if (sender.hasPermission("bs.plot.snapshot")) {
-                sender.sendMessage("Sicherung zum Zurücksetzen: " + (plots().hasSnapshot(plot) ? "vorhanden" : "keine"));
+                Messages.send(sender, plots().hasSnapshot(plot) ? "info.snapshot-yes" : "info.snapshot-no");
             }
             return true;
         });
@@ -260,7 +247,7 @@ public final class PlotCommand {
             Plot plot = findPlot(player, plotId, null);
             if (plot == null) return false;
             if (!plot.isOwner(player.getUniqueId())) {
-                player.sendMessage("Grundstück " + plot.id() + " gehört dir nicht.");
+                Messages.send(player, "plot.not-yours", Messages.arg("id", plot.id()));
                 return false;
             }
             if (reset && !resetCooldownOver(player)) return false;
@@ -277,7 +264,7 @@ public final class PlotCommand {
         Player player = CommandSupport.requirePlayer(context);
         if (player == null) return 0;
         return CommandSupport.run(player, () -> {
-            sendPlotList(player, player.getUniqueId(), "Deine Grundstücke");
+            sendPlotList(player, player.getUniqueId(), Messages.get(player, "list.own-title"));
             return true;
         });
     }
@@ -287,7 +274,8 @@ public final class PlotCommand {
         OfflinePlayer target = findPerson(sender, StringArgumentType.getString(context, "name"));
         if (target == null) return 0;
         return CommandSupport.run(sender, () -> {
-            sendPlotList(sender, target.getUniqueId(), "Grundstücke von " + PlayerLookup.nameOf(target.getUniqueId()));
+            sendPlotList(sender, target.getUniqueId(),
+                    Messages.get(sender, "list.other-title", Messages.arg("name", PlayerLookup.nameOf(target.getUniqueId()))));
             return true;
         });
     }
@@ -298,24 +286,23 @@ public final class PlotCommand {
         return CommandSupport.run(player, () -> {
             Optional<HomeService.Home> home = homes().getHome(player.getUniqueId());
             if (home.isEmpty()) {
-                player.sendMessage("Du hast noch kein Home. Stell dich auf dein Grundstück und nutze /plot home set.");
+                Messages.send(player, "home.none");
                 return false;
             }
             Location location = home.get().location().orElse(null);
             if (location == null) {
-                player.sendMessage("Die Welt " + home.get().worldName() + " deines Homes ist gerade nicht geladen.");
+                Messages.send(player, "home.world-not-loaded", Messages.arg("world", home.get().worldName()));
                 return false;
             }
             Optional<Plot> plot = plots().getPlot(location.getWorld(), home.get().plotId());
             if (plot.isEmpty() || !plots().hasRight(plot.get(), player.getUniqueId(), PlotRight.HOME)) {
                 // Rechte wurden entzogen (z.B. per /rg removemember) – Home ist nicht mehr gültig
                 homes().deleteHome(player.getUniqueId());
-                player.sendMessage("Dein Home auf " + home.get().plotId() + " gilt nicht mehr, weil du dort keine Rechte mehr hast. "
-                        + "Setze mit /plot home set ein neues.");
+                Messages.send(player, "home.invalid", Messages.arg("id", home.get().plotId()));
                 return false;
             }
             player.teleportAsync(location);
-            player.sendMessage("Willkommen zu Hause auf " + plot.get().id() + ".");
+            Messages.send(player, "home.welcome", Messages.arg("id", plot.get().id()));
             return true;
         });
     }
@@ -327,11 +314,11 @@ public final class PlotCommand {
             Plot plot = findPlot(player, null, null);
             if (plot == null) return false;
             if (!plots().hasRight(plot, player.getUniqueId(), PlotRight.HOME)) {
-                player.sendMessage("Auf " + plot.id() + " darfst du kein Home setzen (dafür brauchst du dort eine Rolle mit Home-Recht).");
+                Messages.send(player, "home.set-denied", Messages.arg("id", plot.id()));
                 return false;
             }
             homes().setHome(player.getUniqueId(), plot, player.getLocation());
-            player.sendMessage("Home auf " + plot.id() + " gesetzt. Mit /plot home kommst du hierher zurück.");
+            Messages.send(player, "home.set", Messages.arg("id", plot.id()));
             return true;
         });
     }
@@ -340,7 +327,7 @@ public final class PlotCommand {
         CommandSender sender = context.getSource().getSender();
         OfflinePlayer target = findPerson(sender, StringArgumentType.getString(context, "name"));
         if (target == null) return 0;
-        String roleKey = StringArgumentType.getString(context, "rolle").toLowerCase();
+        String roleKey = StringArgumentType.getString(context, "role").toLowerCase();
         return CommandSupport.run(sender, () -> {
             Plot plot = findManagedPlot(sender, plotId, world);
             return plot != null && plots().trust(sender, plot, target, roleKey);
@@ -366,12 +353,11 @@ public final class PlotCommand {
             if (plot == null) return false;
             Optional<Location> target = plots().getTeleportLocation(plot);
             if (target.isEmpty()) {
-                player.sendMessage("Auf " + plot.id() + " gibt es keinen sicheren Landeplatz (nur Lava, Feuer o.Ä.). "
-                        + "Es wurde nicht teleportiert.");
+                Messages.send(player, "tp.no-safe-spot", Messages.arg("id", plot.id()));
                 return false;
             }
             player.teleportAsync(target.get());
-            player.sendMessage("Teleportiert zu " + plot.id() + " (Welt " + plot.world().getName() + ").");
+            Messages.send(player, "tp.done", Messages.arg("id", plot.id()), Messages.arg("world", plot.world().getName()));
             return true;
         });
     }
@@ -429,7 +415,7 @@ public final class PlotCommand {
             Plot plot = findPlot(sender, idArgument(context), world);
             if (plot == null) return false;
             if (plots().hasSnapshot(plot) && !CommandSupport.confirmed(sender, "snapshot:" + key(plot),
-                    "Für " + plot.id() + " gibt es schon eine Sicherung; sie wird durch den aktuellen Zustand ersetzt.")) {
+                    Messages.get(sender, "snapshot.confirm-replace", Messages.arg("id", plot.id())))) {
                 return false;
             }
             return plots().saveSnapshot(sender, plot);
@@ -454,7 +440,7 @@ public final class PlotCommand {
             return true;
         }
         long minutesLeft = (waitMillis - since + 59_999) / 60_000;
-        player.sendMessage("Zurücksetzen geht erst wieder in " + minutesLeft + " Minute(n). Ohne 'reset' kannst du sofort freigeben.");
+        Messages.send(player, "reset.cooldown", Messages.arg("minutes", minutesLeft));
         return false;
     }
 
@@ -464,7 +450,7 @@ public final class PlotCommand {
             return true; // release/remove/reset melden dann selbst, dass es keine Sicherung gibt
         }
         return CommandSupport.confirmed(sender, action + "-reset:" + key(plot),
-                "Achtung: " + plot.id() + " wird auf den Zustand beim Anlegen zurückgesetzt – alles Gebaute geht unwiderruflich verloren.");
+                Messages.get(sender, "reset.confirm", Messages.arg("id", plot.id())));
     }
 
     private static String key(Plot plot) {
@@ -480,7 +466,7 @@ public final class PlotCommand {
     }
 
     /**
-     * Baustein {@code <id> [Welt]} bzw. mit {@code withReset} {@code <id> [Welt] [reset]}.
+     * Baustein {@code <id> [World]} bzw. mit {@code withReset} {@code <id> [World] [reset]}.
      * Die Welt ist im Spiel optional (Standard: eigene Welt) und aus der Konsole Pflicht.
      *
      * @param filter welche Grundstücke bei der Tab-Vervollständigung vorgeschlagen werden
@@ -500,7 +486,7 @@ public final class PlotCommand {
         return id.then(world);
     }
 
-    /** Unterbefehl {@code <name> <ID> [Welt]}; wird für "tp" und "teleport" gebaut. */
+    /** Unterbefehl {@code <name> <ID> [World]}; wird für "tp" und "teleport" gebaut. */
     private static LiteralArgumentBuilder<CommandSourceStack> teleport(String name) {
         return Commands.literal(name)
                 .requires(source -> source.getSender().hasPermission("bs.plot.tp"))
@@ -521,22 +507,22 @@ public final class PlotCommand {
     }
 
     /**
-     * Argument {@code [Welt]} mit dem Weltnamen, wie ihn das Plugin überall anzeigt (z.B. "world").
+     * Argument {@code [World]} mit dem Weltnamen, wie ihn das Plugin überall anzeigt (z.B. "world").
      * Bewusst nicht {@code ArgumentTypes.world()}: das erwartet den Dimensionsschlüssel
      * ("minecraft:overworld") und lehnt "world" ab.
      */
     private static RequiredArgumentBuilder<CommandSourceStack, String> worldArgument() {
-        return Commands.argument("welt", StringArgumentType.word())
+        return Commands.argument("world", StringArgumentType.word())
                 .suggests(PlotCommand::suggestWorlds);
     }
 
     /**
-     * Welt zum Argument {@code [Welt]}: per Name ("world") oder Schlüssel ohne Namensraum ("overworld").
+     * Welt zum Argument {@code [World]}: per Name ("world") oder Schlüssel ohne Namensraum ("overworld").
      *
      * @throws CommandSyntaxException wenn es die Welt nicht gibt (Minecraft zeigt die Meldung rot an)
      */
     private static World worldArgument(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
-        String name = StringArgumentType.getString(context, "welt");
+        String name = StringArgumentType.getString(context, "world");
         World world = Bukkit.getWorld(name);
         if (world == null) {
             for (World candidate : Bukkit.getWorlds()) {
@@ -547,7 +533,9 @@ public final class PlotCommand {
         }
         if (world == null) {
             String known = Bukkit.getWorlds().stream().map(World::getName).collect(Collectors.joining(", "));
-            throw new SimpleCommandExceptionType(new LiteralMessage("Unbekannte Welt '" + name + "'. Vorhanden: " + known)).create();
+            Component message = Messages.get(context.getSource().getSender(), "world.unknown",
+                    Messages.arg("world", name), Messages.arg("worlds", known));
+            throw new SimpleCommandExceptionType(MessageComponentSerializer.message().serialize(message)).create();
         }
         return world;
     }
@@ -602,7 +590,7 @@ public final class PlotCommand {
     private static Plot findManagedPlot(CommandSender sender, String plotId, World world) {
         Plot plot = findPlot(sender, plotId, world);
         if (plot != null && !canManage(sender, plot)) {
-            sender.sendMessage("Rollen auf " + plot.id() + " können nur die Besitzenden vergeben.");
+            Messages.send(sender, "trust.not-owner", Messages.arg("id", plot.id()));
             return null;
         }
         return plot;
@@ -619,12 +607,12 @@ public final class PlotCommand {
     private static Plot findPlot(CommandSender sender, String plotId, World world) {
         Player player = sender instanceof Player p ? p : null;
         if (plotId == null && player == null) {
-            sender.sendMessage("Aus der Konsole bitte ID und Welt angeben, z.B. plot_3 world.");
+            Messages.send(sender, "plot.console-need-id-world");
             return null;
         }
         if (plotId != null && world == null) {
             if (player == null) {
-                sender.sendMessage("Aus der Konsole bitte zusätzlich die Welt angeben, z.B. " + plotId + " world.");
+                Messages.send(sender, "plot.console-need-world", Messages.arg("id", plotId));
                 return null;
             }
             world = player.getWorld();
@@ -634,9 +622,11 @@ public final class PlotCommand {
                 ? plots().getPlotAt(player.getLocation())
                 : plots().getPlot(world, plotId);
         if (plot.isEmpty()) {
-            sender.sendMessage(plotId == null
-                    ? "Du stehst auf keinem Grundstück. Gib eine ID an, z.B. plot_3."
-                    : "Grundstück " + plotId + " gibt es in der Welt " + world.getName() + " nicht.");
+            if (plotId == null) {
+                Messages.send(sender, "plot.not-on-plot");
+            } else {
+                Messages.send(sender, "plot.not-found", Messages.arg("id", plotId), Messages.arg("world", world.getName()));
+            }
             return null;
         }
         return plot.get();
@@ -646,20 +636,20 @@ public final class PlotCommand {
     private static OfflinePlayer findPerson(CommandSender sender, String name) {
         OfflinePlayer target = PlayerLookup.findByName(name);
         if (target == null) {
-            sender.sendMessage(name + " war noch nie auf diesem Server.");
+            Messages.send(sender, "person.unknown", Messages.arg("name", name));
         }
         return target;
     }
 
-    private static void sendPlotList(CommandSender sender, UUID owner, String title) {
+    private static void sendPlotList(CommandSender sender, UUID owner, Component title) {
         List<Plot> owned = plots().getOwnedPlots(owner);
         if (owned.isEmpty()) {
-            sender.sendMessage(title + ": keine");
+            Messages.send(sender, "list.empty", Messages.arg("title", title));
             return;
         }
-        sender.sendMessage(title + " (" + owned.size() + "):");
+        Messages.send(sender, "list.header", Messages.arg("title", title), Messages.arg("count", owned.size()));
         for (Plot plot : owned) {
-            sender.sendMessage("- " + plot.id() + " (Welt " + plot.world().getName() + ")");
+            Messages.send(sender, "list.entry", Messages.arg("id", plot.id()), Messages.arg("world", plot.world().getName()));
         }
     }
 

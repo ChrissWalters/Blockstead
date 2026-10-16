@@ -1,0 +1,137 @@
+# Blockstead – English texts
+#
+# Format: one text per key, MiniMessage formatting (https://docs.papermc.io/adventure/minimessage/format),
+# e.g. <gold>, <bold>, <red>…</red>. Tags like <id> or <name> are placeholders filled in by the plugin – keep
+# them exactly as they are. Clicks that run a command (<click:run_command:…>) are removed.
+#
+# Your own changes: don't edit this file inside the jar. Put a file with the same name into
+# plugins/Blockstead/lang/ that contains only the keys you want to change – everything else comes from the
+# bundled file. A new file (e.g. fr.yml, a copy of this one) adds a new language.
+
+
+assign.done: "Plot <id> was given to <name>."
+assign.received: "You were given the plot <id>."
+assign.taken: "Plot <id> is already taken. Release it first with /plot unassign."
+
+claim.economy-unavailable: "Plots can't be bought right now because the server currency is not available. Please tell the server team."
+claim.not-enough: "You don't have enough money: <id> costs <price>, you have <balance>."
+claim.payment-failed: "The payment failed: <error>. Nothing was charged."
+claim.success-free: "Plot <id> is yours now. It was free."
+claim.success-paid: "Plot <id> is yours now. Paid: <price>, balance: <balance>."
+claim.taken: "Plot <id> is already taken."
+
+confirm.repeat: "<warning> <gray>To confirm, repeat the same command within 30 seconds.</gray>"
+
+create.done: "Plot <id> has been created."
+create.no-selection: "Please make a complete WorldEdit selection first."
+create.overlap: "The selection overlaps <plots>. Plots must not overlap – please adjust the selection."
+create.priority-warning: "<red>Warning:</red> <regions> overlaps the plot with the same or a higher priority (in brackets) and overrides its owners and flags there. Set the priority of these region(s) below <priority>, e.g. /rg setpriority <ID> 0."
+create.wrong-shape: "The selection must be a cuboid (//sel cuboid) or a polygon (//sel poly)."
+
+error.database: "Database error – please tell the server team."
+error.players-only: "This command can only be used in the game."
+
+help.assign: "/plot assign <ID> <Name> [World] – give a free plot to someone at no cost"
+help.claim: "/plot claim [ID] – buy a free plot (<price>)"
+help.create: "/plot create – create a plot from the WorldEdit selection"
+help.header: "<gold>Plot commands</gold> <gray>(leave out [ID] = the plot you are standing on; [World] only for other worlds or from the console)</gray>"
+help.home: "/plot home – teleport to your home"
+help.home-set: "/plot home set – set your home here (on your plot)"
+help.info: "/plot info [ID] [World] – information about the plot"
+help.list: "/plot list – your plots"
+help.list-others: "/plot list <Name> – plots of another person"
+help.remove: "/plot remove <ID> [World] [reset] – delete a plot"
+help.reset: "/plot reset [ID] [World] – restore a plot from its snapshot (ownership stays)"
+help.snapshot: "/plot snapshot <ID> [World] – save the current state as the reset snapshot"
+help.tp: "/plot tp <ID> [World] – teleport to a plot"
+help.trust: "/plot trust <Name> <Role> [ID] [World] – give a role (<roles>)"
+help.unassign: "/plot unassign <ID> [World] [reset] – release a plot"
+help.unclaim: "/plot unclaim [ID] [reset] – give your plot back (refunded; reset = restore its original state)"
+help.untrust: "/plot untrust <Name> [ID] [World] – remove a role"
+
+home.invalid: "Your home on <id> is no longer valid because you no longer have rights there. Set a new one with /plot home set."
+home.none: "You don't have a home yet. Stand on your plot and use /plot home set."
+home.set: "Home set on <id>. Use /plot home to come back here."
+home.set-denied: "You can't set a home on <id> (you need a role with the home right there)."
+home.welcome: "Welcome home to <id>."
+home.world-not-loaded: "The world <world> of your home is not loaded right now."
+
+info.free: "Status: free – buy it with /plot claim <id> for <price>"
+info.header: "<gold>Plot <id></gold> <gray>(world <world>)</gray>"
+info.license: "Free software under the GNU AGPL-3.0. Source code: <source>"
+info.member: "- <name>: <role>"
+info.own-role: "Your role: <role>"
+info.owners: "Owners: <names>"
+info.plugin: "<gold><name></gold> <version> – plots, roles and more. Commands: /plot"
+info.snapshot-no: "Reset snapshot: none"
+info.snapshot-yes: "Reset snapshot: available"
+
+join.new: "<light_purple><name></light_purple> is new on the server – welcome!"
+join.new-hint: "Welcome to our server! Press <light_purple><bold><key:key.chat></bold></light_purple> to introduce yourself in the chat!"
+join.welcome-back: "Welcome back, <light_purple><name></light_purple>! <bold>Great</bold> to see you again!"
+
+list.empty: "<title>: none"
+list.entry: "- <id> <gray>(world <world>)</gray>"
+list.header: "<title> (<count>):"
+list.other-title: "Plots of <name>"
+list.own-title: "Your plots"
+
+person.unknown: "<name> has never been on this server."
+
+plot.console-need-id-world: "From the console, please give an ID and a world, e.g. plot_3 world."
+plot.console-need-world: "From the console, please also give the world, e.g. <id> world."
+plot.no-regions: "WorldGuard regions are not available in this world."
+plot.not-found: "There is no plot <id> in the world <world>."
+plot.not-on-plot: "You are not standing on a plot. Give an ID, e.g. plot_3."
+plot.not-yours: "Plot <id> does not belong to you."
+
+protection.denied: "<red>You can't do that on <id> as <role>.</red>"
+
+quit: "<light_purple><name></light_purple> has left the server. We <bold>hope</bold> to see you again soon!"
+
+refund.done: "You were refunded <price> for the plot <id>."
+refund.failed: "The refund for the plot <id> (<price>) could not be booked right now. The server team will take care of it."
+
+region.enter-plot: "You are entering the plot <id>"
+region.enter-region: "You are entering the region <id>"
+region.leave-plot: "You are leaving the plot <id>"
+region.leave-region: "You are leaving the region <id>"
+
+release.already-free: "Plot <id> is already free."
+release.done: "Plot <id> is free again."
+release.done-reset: "Plot <id> is free again and has been restored."
+
+remove.done: "Plot <id> has been deleted."
+
+reset.confirm: "<red>Warning:</red> <id> will be restored to its original state – everything built there will be lost for good."
+reset.cooldown: "You can reset again in <minutes> minute(s). Without 'reset' you can give the plot back right away."
+reset.done: "Plot <id> has been restored."
+reset.failed: "Restoring <id> failed, nothing else was changed. See the server log for details."
+reset.no-snapshot: "<id> has no reset snapshot (e.g. created before Blockstead 1.0.0). Nothing was changed. Without 'reset' the contents stay as they are."
+
+role.builder: "Builder"
+role.guest: "Guest"
+role.member-all-rights: "Member with all rights"
+role.owner: "Owner"
+role.resident: "Resident"
+role.unknown: "<key> (unknown role, no rights)"
+
+snapshot.confirm-replace: "<id> already has a snapshot; it will be replaced by the current state."
+snapshot.failed: "Saving the snapshot of <id> failed, see the server log for details."
+snapshot.saved: "The current state of <id> is now the reset snapshot."
+
+tp.done: "Teleported to <id> (world <world>)."
+tp.no-safe-spot: "There is no safe spot to land on <id> (only lava, fire or similar). You were not teleported."
+
+trust.done: "<name> now has the role <role> on <id>."
+trust.last-owner-demote: "<name> is the only owner of <id> and can't be demoted. To give the plot back: /plot unclaim"
+trust.not-owner: "Only the owners can give roles on <id>."
+trust.received: "You now have the role <role> on the plot <id>."
+trust.unknown-role: "Unknown role '<role>'. Possible: <roles>"
+
+untrust.done: "<name> no longer has a role on <id>."
+untrust.last-owner: "<name> is the only owner of <id>. To give the plot back: /plot unclaim"
+untrust.no-role: "<name> has no role on <id>."
+untrust.received: "Your role on the plot <id> was removed."
+
+world.unknown: "Unknown world '<world>'. Available: <worlds>"

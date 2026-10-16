@@ -83,7 +83,7 @@ public class SnapshotService {
     public void restore(Plot plot) throws IOException, WorldEditException {
         File file = file(plot);
         if (!file.isFile()) {
-            throw new IOException("Keine Sicherung für " + plot.id());
+            throw new IOException("No snapshot for " + plot.id());
         }
         Clipboard clipboard;
         try (ClipboardReader reader = BuiltInClipboardFormat.SPONGE_V3_SCHEMATIC.getReader(new FileInputStream(file))) {

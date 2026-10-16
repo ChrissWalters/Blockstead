@@ -8,6 +8,7 @@ import com.github.chrisswalters.blockstead.display.DisplayService;
 import com.github.chrisswalters.blockstead.display.DisplaySetup;
 import com.github.chrisswalters.blockstead.economy.BalanceImport;
 import com.github.chrisswalters.blockstead.economy.EconomyService;
+import com.github.chrisswalters.blockstead.lang.Messages;
 import com.github.chrisswalters.blockstead.listeners.*;
 import com.github.chrisswalters.blockstead.players.PlayerUtility;
 import com.github.chrisswalters.blockstead.plots.ConsistencyCheck;
@@ -84,8 +85,8 @@ public final class Blockstead extends JavaPlugin {
             if (existing instanceof StringFlag stringFlag) {
                 REGIONNAME = stringFlag;
             } else {
-                getLogger().severe("WorldGuard-Flag 'region-name' ist bereits von einem anderen Plugin mit anderem Typ belegt. "
-                        + "Regionsnamen beim Betreten werden nicht angezeigt.");
+                getLogger().severe("WorldGuard flag 'region-name' is already registered by another plugin with a different type. "
+                        + "Custom texts when entering regions are not shown.");
             }
         }
     }
@@ -97,6 +98,7 @@ public final class Blockstead extends JavaPlugin {
         worldEditPlugin = (WorldEditPlugin) getServer().getPluginManager().getPlugin("WorldEdit");
         worldGuardPlugin = (WorldGuardPlugin) getServer().getPluginManager().getPlugin("WorldGuard");
         pluginConfig = PluginConfig.load(this);
+        Messages.load(this, pluginConfig.getLanguage(), pluginConfig.getFallbackLanguage());
         if (pluginConfig.isBackupsEnabled()) {
             // Vor dem Öffnen der Datenbank, also auch vor Migrationen und Datenkorrekturen eines Updates
             Backups.createStartupBackup(this, pluginConfig.getBackupsKeep());
@@ -105,7 +107,7 @@ public final class Blockstead extends JavaPlugin {
         try {
             database = new Database(new File(getDataFolder(), "data.db"));
         } catch (SQLException e) {
-            getLogger().log(Level.SEVERE, "Datenbank konnte nicht geöffnet werden. Plugin wird deaktiviert. " + e.getMessage(), e);
+            getLogger().log(Level.SEVERE, "Could not open the database. Disabling the plugin. " + e.getMessage(), e);
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
@@ -130,17 +132,17 @@ public final class Blockstead extends JavaPlugin {
         // Befehle über das Brigadier-Befehlssystem von Paper (nicht über plugin.yml)
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             Commands commands = event.registrar();
-            commands.register(PlotCommand.build(), "Grundstücks-Befehle", List.of("p"));
-            commands.register(InfoCommand.build(), "Version, Lizenz und Quellcode von Blockstead");
+            commands.register(PlotCommand.build(), "Plot commands", List.of("p"));
+            commands.register(InfoCommand.build(), "Version, license and source code of Blockstead");
             // Ohne Alias /broadcast – den belegt EssentialsX
-            commands.register(AnnounceCommand.build("announce"), "Server-Nachricht des Teams an alle");
+            commands.register(AnnounceCommand.build("announce"), "Highlighted server message from the team to everyone");
         });
 
         // LuckPerms ist optional: nur dann die Klassen aus dem Paket display laden
         if (pluginConfig.isDisplayEnabled() && getServer().getPluginManager().getPlugin("LuckPerms") != null) {
             display = DisplaySetup.enable(this, pluginConfig);
         } else if (pluginConfig.isDisplayEnabled()) {
-            getLogger().warning("LuckPerms ist nicht installiert – Präfixe in Chat und Tab-Liste sind deaktiviert.");
+            getLogger().warning("LuckPerms is not installed – prefixes in chat and tab list are disabled.");
         }
 
         // Wer schon online ist (z.B. nach /reload), bekommt keinen PlayerJoinEvent
@@ -169,7 +171,7 @@ public final class Blockstead extends JavaPlugin {
             try {
                 database.close();
             } catch (SQLException e) {
-                getLogger().log(Level.WARNING, "Datenbank konnte nicht sauber geschlossen werden.", e);
+                getLogger().log(Level.WARNING, "Could not close the database cleanly.", e);
             }
         }
     }

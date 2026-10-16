@@ -55,7 +55,7 @@ public final class AnnounceCommand {
                 player.playSound(sound, Sound.Emitter.self());
             }
         }
-        Blockstead.getInstance().getLogger().info("Server-Nachricht von " + context.getSource().getSender().getName() + ": " + raw);
+        Blockstead.getInstance().getLogger().info("Server message from " + context.getSource().getSender().getName() + ": " + raw);
         return Command.SINGLE_SUCCESS;
     }
 }

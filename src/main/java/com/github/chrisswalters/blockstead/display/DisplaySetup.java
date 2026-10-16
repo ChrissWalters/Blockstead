@@ -27,19 +27,19 @@ public final class DisplaySetup {
     public static DisplayService enable(JavaPlugin plugin, PluginConfig config) {
         LuckPerms luckPerms = Bukkit.getServicesManager().load(LuckPerms.class);
         if (luckPerms == null) {
-            plugin.getLogger().warning("LuckPerms-API nicht verfügbar – Präfixe in Chat und Tab-Liste sind deaktiviert.");
+            plugin.getLogger().warning("LuckPerms API not available – prefixes in chat and tab list are disabled.");
             return null;
         }
         String version = luckPerms.getPluginMetadata().getVersion();
         if (Versions.compare(version, MIN_LUCKPERMS_VERSION) < 0) {
-            plugin.getLogger().warning("LuckPerms " + version + " ist zu alt (mindestens " + MIN_LUCKPERMS_VERSION
-                    + ") – Präfixe in Chat und Tab-Liste sind deaktiviert.");
+            plugin.getLogger().warning("LuckPerms " + version + " is too old (at least " + MIN_LUCKPERMS_VERSION
+                    + ") – prefixes in chat and tab list are disabled.");
             return null;
         }
         DisplayService display = new DisplayService(plugin, luckPerms, config);
         plugin.getServer().getPluginManager().registerEvents(new DisplayListener(display), plugin);
         display.start();
-        plugin.getLogger().info("LuckPerms " + version + " gefunden – Präfixe in Chat und Tab-Liste aktiv.");
+        plugin.getLogger().info("LuckPerms " + version + " found – prefixes in chat and tab list are active.");
         return display;
     }
 }

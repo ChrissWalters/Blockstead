@@ -1,10 +1,9 @@
 package com.github.chrisswalters.blockstead.listeners;
 
+import com.github.chrisswalters.blockstead.lang.Messages;
 import com.github.chrisswalters.blockstead.plots.Plot;
 import com.github.chrisswalters.blockstead.plots.PlotService;
 import com.github.chrisswalters.blockstead.roles.PlotRight;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Tag;
@@ -219,8 +218,8 @@ public class PlotProtectionListener implements Listener {
         }
         if (!plots.hasRight(plot, player.getUniqueId(), right)) {
             event.setCancelled(true);
-            player.sendActionBar(Component.text("Das darfst du auf " + plot.id() + " als "
-                    + plots.describeRole(plot, player.getUniqueId()) + " nicht.", NamedTextColor.RED));
+            player.sendActionBar(Messages.get(player, "protection.denied", Messages.arg("id", plot.id()),
+                    Messages.arg("role", plots.describeRole(plot, player.getUniqueId(), player))));
         }
     }
 

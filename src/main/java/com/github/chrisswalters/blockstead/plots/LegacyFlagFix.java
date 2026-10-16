@@ -60,7 +60,7 @@ public final class LegacyFlagFix {
                     }
                 }
                 if (!removed.isEmpty()) {
-                    log.info("Altdaten-Korrektur: " + region.getId() + " in " + world.getName() + " – entfernt: " + removed);
+                    log.info("Legacy flag fix: " + region.getId() + " in " + world.getName() + " – removed: " + removed);
                     changedRegions++;
                     worldChanged = true;
                 }
@@ -69,12 +69,12 @@ public final class LegacyFlagFix {
                 try {
                     manager.saveChanges();
                 } catch (StorageException e) {
-                    log.severe("Altdaten-Korrektur: Regionen in " + world.getName() + " konnten nicht gespeichert werden: " + e.getMessage());
+                    log.severe("Legacy flag fix: could not save regions in " + world.getName() + ": " + e.getMessage());
                     return; // Merker nicht setzen, beim nächsten Start erneut versuchen
                 }
             }
         }
         database.setMeta(META_KEY, String.valueOf(System.currentTimeMillis()));
-        log.info("Altdaten-Korrektur abgeschlossen: " + changedRegions + " Grundstück(e) angepasst.");
+        log.info("Legacy flag fix finished: " + changedRegions + " plot(s) changed.");
     }
 }

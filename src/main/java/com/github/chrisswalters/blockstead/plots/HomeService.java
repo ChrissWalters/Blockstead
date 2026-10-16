@@ -45,7 +45,7 @@ public class HomeService {
             statement.setFloat(8, location.getPitch());
             statement.executeUpdate();
         } catch (SQLException e) {
-            throw new DataException("Home konnte nicht gespeichert werden", e);
+            throw new DataException("Could not save home", e);
         }
     }
 
@@ -66,7 +66,7 @@ public class HomeService {
                 return Optional.of(new Home(worldName, result.getString(2), location));
             }
         } catch (SQLException e) {
-            throw new DataException("Home konnte nicht gelesen werden", e);
+            throw new DataException("Could not read home", e);
         }
     }
 
@@ -77,7 +77,7 @@ public class HomeService {
             statement.setString(1, uuid.toString());
             statement.executeUpdate();
         } catch (SQLException e) {
-            throw new DataException("Home konnte nicht gelöscht werden", e);
+            throw new DataException("Could not delete home", e);
         }
     }
 
@@ -90,7 +90,7 @@ public class HomeService {
             statement.setString(3, plot.id());
             statement.executeUpdate();
         } catch (SQLException e) {
-            throw new DataException("Home konnte nicht gelöscht werden", e);
+            throw new DataException("Could not delete home", e);
         }
     }
 
@@ -102,7 +102,7 @@ public class HomeService {
             statement.setString(2, plot.id());
             statement.executeUpdate();
         } catch (SQLException e) {
-            throw new DataException("Homes konnten nicht gelöscht werden", e);
+            throw new DataException("Could not delete homes", e);
         }
     }
 }

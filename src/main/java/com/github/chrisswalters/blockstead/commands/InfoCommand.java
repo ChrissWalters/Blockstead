@@ -1,7 +1,7 @@
 package com.github.chrisswalters.blockstead.commands;
 
 import com.github.chrisswalters.blockstead.Blockstead;
-import com.github.chrisswalters.blockstead.util.TextFormat;
+import com.github.chrisswalters.blockstead.lang.Messages;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.LiteralCommandNode;
@@ -35,11 +35,10 @@ public final class InfoCommand {
     private static int execute(CommandContext<CommandSourceStack> context) {
         CommandSender sender = context.getSource().getSender();
         PluginMeta meta = Blockstead.getInstance().getPluginMeta();
-        sender.sendMessage(TextFormat.format("<gold>" + meta.getName() + "</gold> " + meta.getVersion()
-                + " – Grundstücke, Rollen und mehr. Befehle: /plot"));
+        Messages.send(sender, "info.plugin", Messages.arg("name", meta.getName()), Messages.arg("version", meta.getVersion()));
         String website = meta.getWebsite();
         String source = website == null || website.isBlank() ? ORIGINAL_SOURCE + " (Original)" : website;
-        sender.sendMessage(TextFormat.format("Freie Software unter der GNU AGPL-3.0. Quellcode: " + source));
+        Messages.send(sender, "info.license", Messages.arg("source", source));
         return Command.SINGLE_SUCCESS;
     }
 }

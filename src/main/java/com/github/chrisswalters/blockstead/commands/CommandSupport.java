@@ -1,10 +1,12 @@
 package com.github.chrisswalters.blockstead.commands;
 
 import com.github.chrisswalters.blockstead.Blockstead;
+import com.github.chrisswalters.blockstead.lang.Messages;
 import com.github.chrisswalters.blockstead.storage.DataException;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -36,7 +38,7 @@ final class CommandSupport {
      *
      * @param action eindeutiger Schlüssel der Aktion inkl. Ziel, z.B. "unclaim-reset:world:plot_3"
      */
-    static boolean confirmed(CommandSender sender, String action, String warning) {
+    static boolean confirmed(CommandSender sender, String action, Component warning) {
         String senderKey = sender instanceof Player player ? player.getUniqueId().toString() : sender.getName();
         long now = System.currentTimeMillis();
         pending.values().removeIf(entry -> entry.expiresAt() < now);
@@ -46,7 +48,7 @@ final class CommandSupport {
             return true;
         }
         pending.put(senderKey, new PendingConfirmation(action, now + CONFIRM_MILLIS));
-        sender.sendMessage(warning + " Zum Bestätigen denselben Befehl innerhalb von 30 Sekunden wiederholen.");
+        Messages.send(sender, "confirm.repeat", Messages.arg("warning", warning));
         return false;
     }
 
@@ -60,7 +62,7 @@ final class CommandSupport {
             return action.getAsBoolean() ? Command.SINGLE_SUCCESS : 0;
         } catch (DataException e) {
             Blockstead.getInstance().getLogger().log(Level.SEVERE, e.getMessage(), e);
-            sender.sendMessage("Datenbankfehler – bitte dem Server-Team melden.");
+            Messages.send(sender, "error.database");
             return 0;
         }
     }
@@ -73,7 +75,7 @@ final class CommandSupport {
         if (context.getSource().getSender() instanceof Player player) {
             return player;
         }
-        context.getSource().getSender().sendMessage("Dieser Befehl geht nur im Spiel.");
+        Messages.send(context.getSource().getSender(), "error.players-only");
         return null;
     }
 }

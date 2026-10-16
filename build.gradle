@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.github.chrisswalters'
-version = '2.0.1'
+version = '2.1.0'
 
 // Paper version the plugin is compiled against and that `./gradlew runServer` starts
 def mcVersion = '26.3'
@@ -69,3 +69,45 @@ tasks.named('runServer') {
         // EssentialsX-*.jar (und EssentialsXSpawn-*.jar) bei Bedarf von Hand nach run/plugins/ legen
     }
 }
+
+// Alle Sprachdateien müssen dieselben Schlüssel und Platzhalter haben wie en.yml (läuft bei ./gradlew build).
+// Platzhalter = kleingeschriebene Tags wie <id>, ohne die Formatierungs-Tags von MiniMessage.
+def checkLanguageFiles = tasks.register('checkLanguageFiles') {
+    def langDir = file('src/main/resources/lang')
+    inputs.dir(langDir)
+    doLast {
+        def styleTags = ['black', 'dark_blue', 'dark_green', 'dark_aqua', 'dark_red', 'dark_purple', 'gold', 'gray',
+                         'grey', 'dark_gray', 'dark_grey', 'blue', 'green', 'aqua', 'red', 'light_purple', 'yellow',
+                         'white', 'bold', 'b', 'italic', 'i', 'em', 'underlined', 'u', 'strikethrough', 'st',
+                         'obfuscated', 'obf', 'reset', 'newline', 'br', 'rainbow', 'gradient', 'transition', 'pride'] as Set
+        def parse = { File f ->
+            def texts = [:]
+            f.eachLine('UTF-8') { line ->
+                def m = line =~ /^([a-z0-9_.-]+):\s*"(.*)"\s*$/
+                if (m.matches()) {
+                    texts[m.group(1)] = m.group(2)
+                }
+            }
+            texts
+        }
+        def placeholders = { String text ->
+            (text =~ /<([a-z_]+)>/).collect { it[1] }.findAll { !styleTags.contains(it) } as Set
+        }
+        def reference = parse(new File(langDir, 'en.yml'))
+        def errors = []
+        langDir.listFiles().findAll { it.name.endsWith('.yml') && it.name != 'en.yml' }.sort().each { f ->
+            def other = parse(f)
+            (reference.keySet() - other.keySet()).each { errors << "${f.name}: missing key ${it}" }
+            (other.keySet() - reference.keySet()).each { errors << "${f.name}: unknown key ${it}" }
+            reference.each { key, text ->
+                if (other.containsKey(key) && placeholders(text) != placeholders(other[key])) {
+                    errors << "${f.name}: placeholders of ${key} differ – en: ${placeholders(text)}, ${f.name}: ${placeholders(other[key])}"
+                }
+            }
+        }
+        if (!errors.isEmpty()) {
+            throw new GradleException("Language files are not consistent:\n  " + errors.join("\n  "))
+        }
+    }
+}
+tasks.named('check') { dependsOn checkLanguageFiles }

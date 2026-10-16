@@ -2,6 +2,7 @@ package com.github.chrisswalters.blockstead.plots;
 
 import com.github.chrisswalters.blockstead.Blockstead;
 import com.github.chrisswalters.blockstead.config.PluginConfig;
+import com.github.chrisswalters.blockstead.lang.Messages;
 import com.sk89q.worldedit.IncompleteRegionException;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
@@ -52,13 +53,13 @@ public class CreatePlot {
             if (selectionWorld == null) throw new IncompleteRegionException();
             selection = session.getSelection(selectionWorld);
         } catch (IncompleteRegionException e) {
-            player.sendMessage("Bitte triff zuerst eine vollständige WorldEdit-Auswahl.");
+            Messages.send(player, "create.no-selection");
             return false;
         }
 
         RegionManager regionManager = WorldGuard.getInstance().getPlatform().getRegionContainer().get(selectionWorld);
         if (regionManager == null) {
-            player.sendMessage("In dieser Welt sind keine WorldGuard-Regionen verfügbar.");
+            Messages.send(player, "plot.no-regions");
             return false;
         }
 
@@ -75,37 +76,33 @@ public class CreatePlot {
             BlockVector3 max = cuboid.getMaximumPoint().withY(maxY);
             plot = new ProtectedCuboidRegion(plotId, min, max);
         } else {
-            player.sendMessage("Die Auswahl muss ein Quader (//sel cuboid) oder ein Polygon (//sel poly) sein.");
+            Messages.send(player, "create.wrong-shape");
             return false;
         }
 
         // Grundstücke dürfen sich nicht überlappen (siehe PlotOverlaps)
         List<ProtectedRegion> overlapping = PlotOverlaps.overlappingPlots(plot, regionManager);
         if (!overlapping.isEmpty()) {
-            player.sendMessage("Die Auswahl überlappt " + PlotOverlaps.describe(overlapping, false)
-                    + ". Grundstücke dürfen sich nicht überlappen – bitte die Auswahl anpassen.");
+            Messages.send(player, "create.overlap", Messages.arg("plots", PlotOverlaps.describe(overlapping, false)));
             return false;
         }
 
         PluginConfig config = Blockstead.getPluginConfig();
         plot.setFlags(new HashMap<>(config.getDefaultPlotFlags()));
-        if (Blockstead.REGIONNAME != null) {
-            plot.setFlag(Blockstead.REGIONNAME, "Du betrittst das Grundstück " + plotId);
-        }
+        // region-name bleibt leer: die Standardmeldung beim Betreten kommt übersetzt aus der Sprachdatei
         plot.setPriority(config.getPlotPriority());
         regionManager.addRegion(plot);
 
-        player.sendMessage("Grundstück " + plotId + " wurde angelegt.");
+        Messages.send(player, "create.done", Messages.arg("id", plotId));
         List<ProtectedRegion> conflicting = PlotOverlaps.conflictingRegions(plot, regionManager, config.getPlotPriority());
         if (!conflicting.isEmpty()) {
-            player.sendMessage("Achtung: " + PlotOverlaps.describe(conflicting, true) + " überlappt das Grundstück mit "
-                    + "gleicher oder höherer Priorität und überstimmt dort Besitzende und Flags. Priorität dieser Region(en) "
-                    + "unter " + config.getPlotPriority() + " setzen, z.B. /rg setpriority <ID> 0.");
+            Messages.send(player, "create.priority-warning", Messages.arg("regions", PlotOverlaps.describe(conflicting, true)),
+                    Messages.arg("priority", config.getPlotPriority()));
         }
         // Zustand beim Anlegen sichern, damit das Grundstück beim Freigeben zurückgesetzt werden kann
         Blockstead.getPlotService().saveSnapshot(player, new Plot(BukkitAdapter.adapt(selectionWorld), plot));
-        Blockstead.getInstance().getLogger().info("Grundstück " + plotId + " in Welt " + selectionWorld.getName()
-                + " angelegt von " + player.getName());
+        Blockstead.getInstance().getLogger().info("Plot " + plotId + " in world " + selectionWorld.getName()
+                + " created by " + player.getName());
         return true;
     }
 

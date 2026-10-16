@@ -1,6 +1,7 @@
 package com.github.chrisswalters.blockstead.listeners;
 
 import com.github.chrisswalters.blockstead.Blockstead;
+import com.github.chrisswalters.blockstead.lang.Messages;
 import com.github.chrisswalters.blockstead.players.BSPlayer;
 import com.github.chrisswalters.blockstead.players.PlayerUtility;
 import com.github.chrisswalters.blockstead.plots.CreatePlot;
@@ -53,27 +54,33 @@ public class PlayerMoveListener implements Listener {
                 ProtectedRegion region = manager.getRegion(regionId);
                 String regionName = (region != null && Blockstead.REGIONNAME != null)
                         ? region.getFlag(Blockstead.REGIONNAME) : null;
-                if (regionName != null) {
+                if (regionName != null && !isLegacyDefault(regionName, regionId)) {
                     player.sendMessage(Component.text(regionName, REGION_NAME_COLOR));
                 } else {
-                    player.sendMessage("Du betrittst " + describe(regionId));
+                    Messages.send(player, isPlot(regionId) ? "region.enter-plot" : "region.enter-region", Messages.arg("id", regionId));
                 }
             }
         }
 
         for (String regionId : lastKnownRegions) {
             if (!currentRegions.contains(regionId)) {
-                player.sendMessage("Du verlässt " + describe(regionId));
+                Messages.send(player, isPlot(regionId) ? "region.leave-plot" : "region.leave-region", Messages.arg("id", regionId));
             }
         }
 
         bsPlayer.setLastKnownRegions(currentRegions);
     }
 
-    /** "das Grundstück plot_3" bzw. "die Region spawn" – je nachdem, ob die Region ein Plot ist. */
-    private static String describe(String regionId) {
-        return regionId.startsWith(CreatePlot.PLOT_PREFIX)
-                ? "das Grundstück " + regionId
-                : "die Region " + regionId;
+    private static boolean isPlot(String regionId) {
+        return regionId.startsWith(CreatePlot.PLOT_PREFIX);
+    }
+
+    /**
+     * Blockstead bis 2.0.x hat beim Anlegen den deutschen Standardtext "Du betrittst das Grundstück plot_3" in die
+     * Flag {@code region-name} geschrieben. Solche Texte werden wie "keine Flag" behandelt, damit auch alte
+     * Grundstücke die übersetzte Standardmeldung zeigen; eigene Texte bleiben unverändert.
+     */
+    private static boolean isLegacyDefault(String regionName, String regionId) {
+        return regionName.equals("Du betrittst das Grundstück " + regionId);
     }
 }

@@ -3,6 +3,7 @@ package com.github.chrisswalters.blockstead.plots;
 import com.github.chrisswalters.blockstead.config.PluginConfig;
 import com.github.chrisswalters.blockstead.economy.EconomyService;
 import com.github.chrisswalters.blockstead.economy.Transaction;
+import com.github.chrisswalters.blockstead.lang.Messages;
 import com.github.chrisswalters.blockstead.roles.PlotRight;
 import com.github.chrisswalters.blockstead.roles.PlotRole;
 import com.github.chrisswalters.blockstead.roles.RoleService;
@@ -17,6 +18,7 @@ import com.sk89q.worldguard.protection.managers.RegionManager;
 import com.sk89q.worldguard.protection.managers.storage.StorageException;
 import com.sk89q.worldguard.protection.regions.ProtectedPolygonalRegion;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -44,7 +46,7 @@ import java.util.logging.Logger;
  * freigeben ({@code unclaim}/{@code unassign}) und löschen ({@code remove}).
  * Angelegt werden Grundstücke über {@link CreatePlot}.
  *
- * <p>Besitzende und Mitglieder stehen in WorldGuard. Rollen unterhalb von "besitzende" sind
+ * <p>Besitzende und Mitglieder stehen in WorldGuard. Rollen unterhalb von "owner" (Besitzende) sind
  * WorldGuard-Mitglieder mit zusätzlich gespeicherter Rolle ({@link RoleService}), vergeben über
  * {@link #trust} und entzogen über {@link #untrust}. In der Tabelle {@code plot_claims} steht, wer ein
  * Grundstück für welchen Preis gekauft hat; beim Freigeben oder Löschen bekommt genau diese Person
@@ -138,12 +140,12 @@ public class PlotService {
         return plot.region().getMembers().contains(uuid) && roles.memberHasRight(plot, uuid, right);
     }
 
-    /** Rolle der Person als Text, z.B. "Besitzende", "Gast"; {@code null} ohne Rolle. */
-    public String describeRole(Plot plot, UUID uuid) {
+    /** Rolle der Person als Anzeigename für den Empfänger, z.B. "Besitzende" bzw. "Owner"; {@code null} ohne Rolle. */
+    public Component describeRole(Plot plot, UUID uuid, CommandSender recipient) {
         if (plot.isOwner(uuid)) {
-            return "Besitzende";
+            return PlotRole.ownerName(recipient);
         }
-        return plot.region().getMembers().contains(uuid) ? roles.describeMember(plot, uuid) : null;
+        return plot.region().getMembers().contains(uuid) ? roles.describeMember(plot, uuid, recipient) : null;
     }
 
     // ---------------------------------------------------------------- Ändern
@@ -155,26 +157,25 @@ public class PlotService {
      */
     public boolean claim(Player player, Plot plot) {
         if (!plot.isFree()) {
-            player.sendMessage("Grundstück " + plot.id() + " ist bereits vergeben.");
+            Messages.send(player, "claim.taken", Messages.arg("id", plot.id()));
             return false;
         }
         long price = config.getPlotPrice();
         if (price > 0) {
             if (!economy.isAvailable()) {
-                player.sendMessage("Grundstücke können gerade nicht gekauft werden, weil die Server-Währung nicht erreichbar ist. "
-                        + "Bitte gib dem Server-Team Bescheid.");
-                log.warning("/plot claim von " + player.getName() + " abgelehnt: kein Economy-Plugin über Vault erreichbar");
+                Messages.send(player, "claim.economy-unavailable");
+                log.warning("/plot claim by " + player.getName() + " refused: no economy plugin available through Vault");
                 return false;
             }
             if (!economy.has(player, price)) {
-                player.sendMessage("Du hast nicht genug Guthaben: " + plot.id() + " kostet " + economy.format(price)
-                        + ", du hast " + economy.format(economy.getBalance(player)) + ".");
+                Messages.send(player, "claim.not-enough", Messages.arg("id", plot.id()), Messages.arg("price", economy.format(price)),
+                        Messages.arg("balance", economy.format(economy.getBalance(player))));
                 return false;
             }
             Transaction payment = economy.withdraw(player, price);
             if (!payment.success()) {
-                player.sendMessage("Die Abbuchung hat nicht geklappt: " + payment.error() + ". Es wurde nichts abgebucht.");
-                log.warning("Abbuchung für " + plot.id() + " von " + player.getName() + " fehlgeschlagen: " + payment.error());
+                Messages.send(player, "claim.payment-failed", Messages.arg("error", payment.error()));
+                log.warning("Payment for " + plot.id() + " by " + player.getName() + " failed: " + payment.error());
                 return false;
             }
             try {
@@ -188,28 +189,31 @@ public class PlotService {
         plot.region().getOwners().addPlayer(player.getUniqueId());
         saveRegions(plot.world());
 
-        player.sendMessage("Grundstück " + plot.id() + " gehört jetzt dir. "
-                + (price > 0 ? "Bezahlt: " + economy.format(price) + ", Guthaben: " + economy.format(economy.getBalance(player)) + "."
-                             : "Es hat nichts gekostet."));
-        log.info(player.getName() + " hat " + plot.id() + " in " + plot.world().getName() + " für " + price + " gekauft");
+        if (price > 0) {
+            Messages.send(player, "claim.success-paid", Messages.arg("id", plot.id()), Messages.arg("price", economy.format(price)),
+                    Messages.arg("balance", economy.format(economy.getBalance(player))));
+        } else {
+            Messages.send(player, "claim.success-free", Messages.arg("id", plot.id()));
+        }
+        log.info(player.getName() + " bought " + plot.id() + " in " + plot.world().getName() + " for " + price);
         return true;
     }
 
     /** Weist ein freies Grundstück kostenlos zu (Team-Befehl). */
     public boolean assign(CommandSender sender, Plot plot, OfflinePlayer target) {
         if (!plot.isFree()) {
-            sender.sendMessage("Grundstück " + plot.id() + " ist bereits vergeben. Erst mit /plot unassign freigeben.");
+            Messages.send(sender, "assign.taken", Messages.arg("id", plot.id()));
             return false;
         }
         plot.region().getOwners().addPlayer(target.getUniqueId());
         saveRegions(plot.world());
 
         String name = PlayerLookup.nameOf(target.getUniqueId());
-        sender.sendMessage("Grundstück " + plot.id() + " wurde " + name + " zugewiesen.");
+        Messages.send(sender, "assign.done", Messages.arg("id", plot.id()), Messages.arg("name", name));
         if (target.getPlayer() != null && target.getPlayer() != sender) {
-            target.getPlayer().sendMessage("Dir wurde das Grundstück " + plot.id() + " zugewiesen.");
+            Messages.send(target.getPlayer(), "assign.received", Messages.arg("id", plot.id()));
         }
-        log.info(sender.getName() + " hat " + plot.id() + " in " + plot.world().getName() + " an " + name + " vergeben");
+        log.info(sender.getName() + " assigned " + plot.id() + " in " + plot.world().getName() + " to " + name);
         return true;
     }
 
@@ -222,7 +226,7 @@ public class PlotService {
      */
     public boolean release(CommandSender sender, Plot plot, boolean reset) {
         if (plot.isFree()) {
-            sender.sendMessage("Grundstück " + plot.id() + " ist bereits frei.");
+            Messages.send(sender, "release.already-free", Messages.arg("id", plot.id()));
             return false;
         }
         if (reset && !resetToSnapshot(sender, plot)) {
@@ -235,43 +239,41 @@ public class PlotService {
         plot.region().getMembers().clear();
         saveRegions(plot.world());
 
-        sender.sendMessage("Grundstück " + plot.id() + " ist jetzt wieder frei" + (reset ? " und zurückgesetzt." : "."));
-        log.info(sender.getName() + " hat " + plot.id() + " in " + plot.world().getName() + " freigegeben" + (reset ? " und zurückgesetzt" : ""));
+        Messages.send(sender, reset ? "release.done-reset" : "release.done", Messages.arg("id", plot.id()));
+        log.info(sender.getName() + " released " + plot.id() + " in " + plot.world().getName() + (reset ? " and restored it" : ""));
         return true;
     }
 
     /**
-     * Vergibt eine Rolle auf dem Grundstück. {@code roleKey} ist "besitzende" oder ein Schlüssel aus der
+     * Vergibt eine Rolle auf dem Grundstück. {@code roleKey} ist "owner" (bzw. ein Alias) oder ein Schlüssel aus der
      * config.yml. Eine bisherige Rolle der Person wird ersetzt; die letzte besitzende Person kann nicht
      * herabgestuft werden.
      */
     public boolean trust(CommandSender sender, Plot plot, OfflinePlayer target, String roleKey) {
         UUID uuid = target.getUniqueId();
         String name = PlayerLookup.nameOf(uuid);
-        String displayName;
+        PlotRole role = null;
 
-        if (roleKey.equals(PlotRole.OWNER_KEY)) {
+        if (PlotRole.isOwnerKey(roleKey)) {
             plot.region().getMembers().removePlayer(uuid);
             plot.region().getOwners().addPlayer(uuid);
             roles.removeRole(plot, uuid);
-            displayName = "Besitzende";
         } else {
-            PlotRole role = config.getRoles().get(roleKey);
+            role = config.findRole(roleKey);
             if (role == null) {
-                sender.sendMessage("Unbekannte Rolle '" + roleKey + "'. Möglich: " + roleKeys());
+                Messages.send(sender, "trust.unknown-role", Messages.arg("role", roleKey), Messages.arg("roles", roleKeys()));
                 return false;
             }
             if (plot.isOwner(uuid)) {
                 if (isLastOwner(plot, uuid)) {
-                    sender.sendMessage(name + " ist die einzige besitzende Person von " + plot.id()
-                            + " und kann nicht herabgestuft werden. Zum Abgeben: /plot unclaim");
+                    Messages.send(sender, "trust.last-owner-demote", Messages.arg("name", name), Messages.arg("id", plot.id()));
                     return false;
                 }
                 plot.region().getOwners().removePlayer(uuid);
             }
             plot.region().getMembers().addPlayer(uuid);
+            // Immer den eigentlichen Schlüssel speichern, auch wenn ein Alias eingegeben wurde
             roles.setRole(plot, uuid, role.key());
-            displayName = role.displayName();
             // Ohne Home-Recht ist ein Home auf diesem Grundstück nicht mehr gültig
             if (!role.has(PlotRight.HOME)) {
                 homes.deleteHomeIfOnPlot(uuid, plot);
@@ -279,12 +281,16 @@ public class PlotService {
         }
         saveRegions(plot.world());
 
-        sender.sendMessage(name + " hat auf " + plot.id() + " jetzt die Rolle " + displayName + ".");
+        final PlotRole given = role;
+        Messages.send(sender, "trust.done", Messages.arg("name", name), Messages.arg("id", plot.id()),
+                Messages.arg("role", given == null ? PlotRole.ownerName(sender) : given.displayName(sender)));
         Player online = target.getPlayer();
         if (online != null && online != sender) {
-            online.sendMessage("Du hast auf Grundstück " + plot.id() + " jetzt die Rolle " + displayName + ".");
+            Messages.send(online, "trust.received", Messages.arg("id", plot.id()),
+                    Messages.arg("role", given == null ? PlotRole.ownerName(online) : given.displayName(online)));
         }
-        log.info(sender.getName() + ": " + name + " auf " + plot.id() + " in " + plot.world().getName() + " -> " + displayName);
+        log.info(sender.getName() + ": " + name + " on " + plot.id() + " in " + plot.world().getName() + " -> "
+                + (given == null ? PlotRole.OWNER_KEY : given.key()));
         return true;
     }
 
@@ -294,26 +300,26 @@ public class PlotService {
         String name = PlayerLookup.nameOf(uuid);
         if (plot.isOwner(uuid)) {
             if (isLastOwner(plot, uuid)) {
-                sender.sendMessage(name + " ist die einzige besitzende Person von " + plot.id() + ". Zum Abgeben: /plot unclaim");
+                Messages.send(sender, "untrust.last-owner", Messages.arg("name", name), Messages.arg("id", plot.id()));
                 return false;
             }
             plot.region().getOwners().removePlayer(uuid);
         } else if (plot.region().getMembers().contains(uuid)) {
             plot.region().getMembers().removePlayer(uuid);
         } else {
-            sender.sendMessage(name + " hat auf " + plot.id() + " keine Rolle.");
+            Messages.send(sender, "untrust.no-role", Messages.arg("name", name), Messages.arg("id", plot.id()));
             return false;
         }
         roles.removeRole(plot, uuid);
         homes.deleteHomeIfOnPlot(uuid, plot);
         saveRegions(plot.world());
 
-        sender.sendMessage(name + " hat auf " + plot.id() + " keine Rolle mehr.");
+        Messages.send(sender, "untrust.done", Messages.arg("name", name), Messages.arg("id", plot.id()));
         Player online = target.getPlayer();
         if (online != null && online != sender) {
-            online.sendMessage("Deine Rolle auf Grundstück " + plot.id() + " wurde entfernt.");
+            Messages.send(online, "untrust.received", Messages.arg("id", plot.id()));
         }
-        log.info(sender.getName() + ": Rolle von " + name + " auf " + plot.id() + " in " + plot.world().getName() + " entfernt");
+        log.info(sender.getName() + ": removed role of " + name + " on " + plot.id() + " in " + plot.world().getName());
         return true;
     }
 
@@ -322,8 +328,8 @@ public class PlotService {
         if (!resetToSnapshot(sender, plot)) {
             return false;
         }
-        sender.sendMessage("Grundstück " + plot.id() + " wurde zurückgesetzt.");
-        log.info(sender.getName() + " hat " + plot.id() + " in " + plot.world().getName() + " zurückgesetzt");
+        Messages.send(sender, "reset.done", Messages.arg("id", plot.id()));
+        log.info(sender.getName() + " restored " + plot.id() + " in " + plot.world().getName());
         return true;
     }
 
@@ -332,12 +338,12 @@ public class PlotService {
         try {
             snapshots.save(plot);
         } catch (IOException | WorldEditException e) {
-            sender.sendMessage("Sicherung von " + plot.id() + " fehlgeschlagen, Details im Server-Log.");
-            log.log(Level.SEVERE, "Sicherung von " + plot.id() + " fehlgeschlagen", e);
+            Messages.send(sender, "snapshot.failed", Messages.arg("id", plot.id()));
+            log.log(Level.SEVERE, "Saving the snapshot of " + plot.id() + " failed", e);
             return false;
         }
-        sender.sendMessage("Aktueller Zustand von " + plot.id() + " ist jetzt die Sicherung zum Zurücksetzen.");
-        log.info(sender.getName() + " hat eine Sicherung von " + plot.id() + " in " + plot.world().getName() + " angelegt");
+        Messages.send(sender, "snapshot.saved", Messages.arg("id", plot.id()));
+        log.info(sender.getName() + " saved a snapshot of " + plot.id() + " in " + plot.world().getName());
         return true;
     }
 
@@ -346,7 +352,7 @@ public class PlotService {
         return snapshots.hasSnapshot(plot);
     }
 
-    /** Alle vergebbaren Rollenschlüssel, z.B. "besitzende, mitbewohnende, bauhilfe, gast". */
+    /** Alle vergebbaren Rollenschlüssel (ohne Aliase), z.B. "owner, resident, builder, guest". */
     public String roleKeys() {
         List<String> keys = new ArrayList<>();
         keys.add(PlotRole.OWNER_KEY);
@@ -362,7 +368,7 @@ public class PlotService {
     public boolean remove(CommandSender sender, Plot plot, boolean reset) {
         RegionManager manager = WorldGuardUtils.getRegionManager(plot.world());
         if (manager == null) {
-            sender.sendMessage("In dieser Welt sind keine WorldGuard-Regionen verfügbar.");
+            Messages.send(sender, "plot.no-regions");
             return false;
         }
         if (reset && !resetToSnapshot(sender, plot)) {
@@ -375,8 +381,8 @@ public class PlotService {
         manager.removeRegion(plot.id());
         saveRegions(plot.world());
 
-        sender.sendMessage("Grundstück " + plot.id() + " wurde gelöscht.");
-        log.info(sender.getName() + " hat " + plot.id() + " in " + plot.world().getName() + " gelöscht");
+        Messages.send(sender, "remove.done", Messages.arg("id", plot.id()));
+        log.info(sender.getName() + " deleted " + plot.id() + " in " + plot.world().getName());
         return true;
     }
 
@@ -531,16 +537,15 @@ public class PlotService {
     /** Setzt das Grundstück auf die Sicherung zurück; meldet selbst, wenn es keine gibt oder es fehlschlägt. */
     private boolean resetToSnapshot(CommandSender sender, Plot plot) {
         if (!snapshots.hasSnapshot(plot)) {
-            sender.sendMessage("Für " + plot.id() + " gibt es keine Sicherung zum Zurücksetzen (z.B. vor dieser Plugin-Version angelegt). "
-                    + "Es wurde nichts geändert. Ohne 'reset' bleibt der Inhalt stehen.");
+            Messages.send(sender, "reset.no-snapshot", Messages.arg("id", plot.id()));
             return false;
         }
         try {
             snapshots.restore(plot);
             return true;
         } catch (IOException | WorldEditException e) {
-            sender.sendMessage("Zurücksetzen von " + plot.id() + " fehlgeschlagen, es wurde sonst nichts geändert. Details im Server-Log.");
-            log.log(Level.SEVERE, "Zurücksetzen von " + plot.id() + " fehlgeschlagen", e);
+            Messages.send(sender, "reset.failed", Messages.arg("id", plot.id()));
+            log.log(Level.SEVERE, "Restoring " + plot.id() + " failed", e);
             return false;
         }
     }
@@ -559,7 +564,7 @@ public class PlotService {
             statement.setLong(5, System.currentTimeMillis());
             statement.executeUpdate();
         } catch (SQLException e) {
-            throw new DataException("Kauf konnte nicht gespeichert werden", e);
+            throw new DataException("Could not save purchase", e);
         }
     }
 
@@ -597,19 +602,18 @@ public class PlotService {
             Player online = Bukkit.getPlayer(payer);
             if (refund.success()) {
                 if (online != null) {
-                    online.sendMessage("Für Grundstück " + plot.id() + " wurden dir " + economy.format(price) + " erstattet.");
+                    Messages.send(online, "refund.done", Messages.arg("id", plot.id()), Messages.arg("price", economy.format(price)));
                 }
                 return;
             }
             String name = PlayerLookup.nameOf(payer);
-            log.severe("Erstattung fehlgeschlagen: " + plot.id() + " in " + plot.world().getName() + ", " + name + " (" + payer
-                    + "), Betrag " + price + " – " + refund.error() + ". Bitte von Hand erstatten, z.B. /eco give " + name + " " + price);
+            log.severe("Refund failed: " + plot.id() + " in " + plot.world().getName() + ", " + name + " (" + payer
+                    + "), amount " + price + " – " + refund.error() + ". Please refund manually, e.g. /eco give " + name + " " + price);
             if (online != null) {
-                online.sendMessage("Die Erstattung für Grundstück " + plot.id() + " (" + economy.format(price)
-                        + ") konnte gerade nicht gebucht werden. Das Server-Team kümmert sich darum.");
+                Messages.send(online, "refund.failed", Messages.arg("id", plot.id()), Messages.arg("price", economy.format(price)));
             }
         } catch (SQLException e) {
-            throw new DataException("Erstattung fehlgeschlagen", e);
+            throw new DataException("Refund failed", e);
         }
     }
 
@@ -622,7 +626,7 @@ public class PlotService {
         try {
             manager.saveChanges();
         } catch (StorageException e) {
-            log.severe("WorldGuard-Regionen in " + world.getName() + " konnten nicht gespeichert werden: " + e.getMessage());
+            log.severe("Could not save WorldGuard regions in " + world.getName() + ": " + e.getMessage());
         }
     }
 

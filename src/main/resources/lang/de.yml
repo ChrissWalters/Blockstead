@@ -1,0 +1,137 @@
+# Blockstead – deutsche Texte
+#
+# Format: ein Text pro Schlüssel, MiniMessage-Formatierung (https://docs.papermc.io/adventure/minimessage/format),
+# z.B. <gold>, <bold>, <red>…</red>. Tags wie <id> oder <name> sind Platzhalter, die das Plugin füllt – genau so
+# stehen lassen. Klicks, die einen Befehl ausführen (<click:run_command:…>), werden entfernt.
+#
+# Eigene Änderungen: diese Datei nicht in der Jar ändern, sondern eine Datei mit gleichem Namen nach
+# plugins/Blockstead/lang/ legen, die nur die geänderten Schlüssel enthält – alles andere kommt aus der
+# mitgelieferten Datei. Eine neue Datei (z.B. fr.yml als Kopie dieser Datei) ergänzt eine neue Sprache.
+
+
+assign.done: "Grundstück <id> wurde <name> zugewiesen."
+assign.received: "Dir wurde das Grundstück <id> zugewiesen."
+assign.taken: "Grundstück <id> ist bereits vergeben. Erst mit /plot unassign freigeben."
+
+claim.economy-unavailable: "Grundstücke können gerade nicht gekauft werden, weil die Server-Währung nicht erreichbar ist. Bitte gib dem Server-Team Bescheid."
+claim.not-enough: "Du hast nicht genug Guthaben: <id> kostet <price>, du hast <balance>."
+claim.payment-failed: "Die Abbuchung hat nicht geklappt: <error>. Es wurde nichts abgebucht."
+claim.success-free: "Grundstück <id> gehört jetzt dir. Es hat nichts gekostet."
+claim.success-paid: "Grundstück <id> gehört jetzt dir. Bezahlt: <price>, Guthaben: <balance>."
+claim.taken: "Grundstück <id> ist bereits vergeben."
+
+confirm.repeat: "<warning> <gray>Zum Bestätigen denselben Befehl innerhalb von 30 Sekunden wiederholen.</gray>"
+
+create.done: "Grundstück <id> wurde angelegt."
+create.no-selection: "Bitte triff zuerst eine vollständige WorldEdit-Auswahl."
+create.overlap: "Die Auswahl überlappt <plots>. Grundstücke dürfen sich nicht überlappen – bitte die Auswahl anpassen."
+create.priority-warning: "<red>Achtung:</red> <regions> überlappt das Grundstück mit gleicher oder höherer Priorität (in Klammern) und überstimmt dort Besitzende und Flags. Priorität dieser Region(en) unter <priority> setzen, z.B. /rg setpriority <ID> 0."
+create.wrong-shape: "Die Auswahl muss ein Quader (//sel cuboid) oder ein Polygon (//sel poly) sein."
+
+error.database: "Datenbankfehler – bitte dem Server-Team melden."
+error.players-only: "Dieser Befehl geht nur im Spiel."
+
+help.assign: "/plot assign <ID> <Name> [Welt] – freies Grundstück kostenlos zuweisen"
+help.claim: "/plot claim [ID] – freies Grundstück kaufen (<price>)"
+help.create: "/plot create – Grundstück aus der WorldEdit-Auswahl anlegen"
+help.header: "<gold>Grundstücks-Befehle</gold> <gray>([ID] weglassen = Grundstück, auf dem du stehst; [Welt] nur für andere Welten oder aus der Konsole)</gray>"
+help.home: "/plot home – zu deinem Zuhause teleportieren"
+help.home-set: "/plot home set – dein Zuhause hier setzen (auf deinem Grundstück)"
+help.info: "/plot info [ID] [Welt] – Infos zum Grundstück"
+help.list: "/plot list – deine Grundstücke"
+help.list-others: "/plot list <Name> – Grundstücke einer anderen Person"
+help.remove: "/plot remove <ID> [Welt] [reset] – Grundstück löschen"
+help.reset: "/plot reset [ID] [Welt] – Grundstück auf die Sicherung zurücksetzen (Besitz bleibt)"
+help.snapshot: "/plot snapshot <ID> [Welt] – aktuellen Zustand als Sicherung zum Zurücksetzen speichern"
+help.tp: "/plot tp <ID> [Welt] – zu einem Grundstück teleportieren"
+help.trust: "/plot trust <Name> <Rolle> [ID] [Welt] – Rolle vergeben (<roles>)"
+help.unassign: "/plot unassign <ID> [Welt] [reset] – Grundstück freigeben"
+help.unclaim: "/plot unclaim [ID] [reset] – eigenes Grundstück zurückgeben (mit Erstattung; reset = auf den Zustand beim Anlegen zurücksetzen)"
+help.untrust: "/plot untrust <Name> [ID] [Welt] – Rolle entziehen"
+
+home.invalid: "Dein Zuhause auf <id> gilt nicht mehr, weil du dort keine Rechte mehr hast. Setze mit /plot home set ein neues."
+home.none: "Du hast noch kein Zuhause. Stell dich auf dein Grundstück und nutze /plot home set."
+home.set: "Zuhause auf <id> gesetzt. Mit /plot home kommst du hierher zurück."
+home.set-denied: "Auf <id> darfst du kein Zuhause setzen (dafür brauchst du dort eine Rolle mit Home-Recht)."
+home.welcome: "Willkommen zu Hause auf <id>."
+home.world-not-loaded: "Die Welt <world> deines Zuhauses ist gerade nicht geladen."
+
+info.free: "Status: frei – kaufen mit /plot claim <id> für <price>"
+info.header: "<gold>Grundstück <id></gold> <gray>(Welt <world>)</gray>"
+info.license: "Freie Software unter der GNU AGPL-3.0. Quellcode: <source>"
+info.member: "- <name>: <role>"
+info.own-role: "Deine Rolle: <role>"
+info.owners: "Besitzende: <names>"
+info.plugin: "<gold><name></gold> <version> – Grundstücke, Rollen und mehr. Befehle: /plot"
+info.snapshot-no: "Sicherung zum Zurücksetzen: keine"
+info.snapshot-yes: "Sicherung zum Zurücksetzen: vorhanden"
+
+join.new: "<light_purple><name></light_purple> ist neu auf dem Server – herzlich willkommen!"
+join.new-hint: "Willkommen auf unserem Server! Drücke <light_purple><bold><key:key.chat></bold></light_purple>, um dich im Chat vorzustellen!"
+join.welcome-back: "Willkommen zurück, <light_purple><name></light_purple>! <bold>Schön,</bold> dass du wieder da bist!"
+
+list.empty: "<title>: keine"
+list.entry: "- <id> <gray>(Welt <world>)</gray>"
+list.header: "<title> (<count>):"
+list.other-title: "Grundstücke von <name>"
+list.own-title: "Deine Grundstücke"
+
+person.unknown: "<name> war noch nie auf diesem Server."
+
+plot.console-need-id-world: "Aus der Konsole bitte ID und Welt angeben, z.B. plot_3 world."
+plot.console-need-world: "Aus der Konsole bitte zusätzlich die Welt angeben, z.B. <id> world."
+plot.no-regions: "In dieser Welt sind keine WorldGuard-Regionen verfügbar."
+plot.not-found: "Grundstück <id> gibt es in der Welt <world> nicht."
+plot.not-on-plot: "Du stehst auf keinem Grundstück. Gib eine ID an, z.B. plot_3."
+plot.not-yours: "Grundstück <id> gehört dir nicht."
+
+protection.denied: "<red>Das darfst du auf <id> als <role> nicht.</red>"
+
+quit: "<light_purple><name></light_purple> hat den Server verlassen. Wir <bold>hoffen</bold> auf ein baldiges Wiedersehen!"
+
+refund.done: "Für Grundstück <id> wurden dir <price> erstattet."
+refund.failed: "Die Erstattung für Grundstück <id> (<price>) konnte gerade nicht gebucht werden. Das Server-Team kümmert sich darum."
+
+region.enter-plot: "Du betrittst das Grundstück <id>"
+region.enter-region: "Du betrittst die Region <id>"
+region.leave-plot: "Du verlässt das Grundstück <id>"
+region.leave-region: "Du verlässt die Region <id>"
+
+release.already-free: "Grundstück <id> ist bereits frei."
+release.done: "Grundstück <id> ist jetzt wieder frei."
+release.done-reset: "Grundstück <id> ist jetzt wieder frei und zurückgesetzt."
+
+remove.done: "Grundstück <id> wurde gelöscht."
+
+reset.confirm: "<red>Achtung:</red> <id> wird auf den Zustand beim Anlegen zurückgesetzt – alles Gebaute geht unwiderruflich verloren."
+reset.cooldown: "Zurücksetzen geht erst wieder in <minutes> Minute(n). Ohne 'reset' kannst du sofort zurückgeben."
+reset.done: "Grundstück <id> wurde zurückgesetzt."
+reset.failed: "Zurücksetzen von <id> fehlgeschlagen, es wurde sonst nichts geändert. Details im Server-Log."
+reset.no-snapshot: "Für <id> gibt es keine Sicherung zum Zurücksetzen (z.B. vor Blockstead 1.0.0 angelegt). Es wurde nichts geändert. Ohne 'reset' bleibt der Inhalt stehen."
+
+role.builder: "Bauhilfe"
+role.guest: "Gast"
+role.member-all-rights: "Mitglied mit allen Rechten"
+role.owner: "Besitzende"
+role.resident: "Mitbewohnende"
+role.unknown: "<key> (unbekannte Rolle, keine Rechte)"
+
+snapshot.confirm-replace: "Für <id> gibt es schon eine Sicherung; sie wird durch den aktuellen Zustand ersetzt."
+snapshot.failed: "Sicherung von <id> fehlgeschlagen, Details im Server-Log."
+snapshot.saved: "Aktueller Zustand von <id> ist jetzt die Sicherung zum Zurücksetzen."
+
+tp.done: "Teleportiert zu <id> (Welt <world>)."
+tp.no-safe-spot: "Auf <id> gibt es keinen sicheren Landeplatz (nur Lava, Feuer o.Ä.). Es wurde nicht teleportiert."
+
+trust.done: "<name> hat auf <id> jetzt die Rolle <role>."
+trust.last-owner-demote: "<name> ist die einzige besitzende Person von <id> und kann nicht herabgestuft werden. Zum Abgeben: /plot unclaim"
+trust.not-owner: "Rollen auf <id> können nur die Besitzenden vergeben."
+trust.received: "Du hast auf Grundstück <id> jetzt die Rolle <role>."
+trust.unknown-role: "Unbekannte Rolle '<role>'. Möglich: <roles>"
+
+untrust.done: "<name> hat auf <id> keine Rolle mehr."
+untrust.last-owner: "<name> ist die einzige besitzende Person von <id>. Zum Abgeben: /plot unclaim"
+untrust.no-role: "<name> hat auf <id> keine Rolle."
+untrust.received: "Deine Rolle auf Grundstück <id> wurde entfernt."
+
+world.unknown: "Unbekannte Welt '<world>'. Vorhanden: <worlds>"

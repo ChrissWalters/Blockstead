@@ -6,6 +6,7 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 
 import java.util.List;
 import java.util.regex.Pattern;
@@ -33,7 +34,7 @@ public final class TextFormat {
                 return Component.text(url)
                         .decorate(TextDecoration.UNDERLINED)
                         .clickEvent(ClickEvent.openUrl(url))
-                        .hoverEvent(HoverEvent.showText(Component.text("Klicken zum Öffnen: " + url)));
+                        .hoverEvent(HoverEvent.showText(Component.text("↗ " + url)));
             })
             .build();
 
@@ -42,7 +43,15 @@ public final class TextFormat {
 
     /** MiniMessage-Text mit anklickbaren Adressen. */
     public static Component format(String miniMessage) {
-        return withoutRunCommand(MiniMessage.miniMessage().deserialize(miniMessage).replaceText(CLICKABLE_LINKS));
+        return format(miniMessage, TagResolver.empty());
+    }
+
+    /**
+     * Wie {@link #format(String)}, mit Platzhaltern (z.B. aus {@code Messages}). Werte von Platzhaltern, die mit
+     * {@code Placeholder.unparsed} gebaut sind, werden nicht als Formatierung gelesen.
+     */
+    public static Component format(String miniMessage, TagResolver placeholders) {
+        return withoutRunCommand(MiniMessage.miniMessage().deserialize(miniMessage, placeholders).replaceText(CLICKABLE_LINKS));
     }
 
     /**

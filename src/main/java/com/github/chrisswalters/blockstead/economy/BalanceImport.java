@@ -38,17 +38,17 @@ public final class BalanceImport {
             return;
         }
         if (!enabled) {
-            log.info(pending.size() + " Kontostand/Kontostände aus Blockstead 1.x werden nicht übertragen "
+            log.info(pending.size() + " balance(s) from Blockstead 1.x are not transferred "
                     + "(economy.import-old-balances: false).");
             return;
         }
         if (!economy.isAvailable()) {
-            log.warning(pending.size() + " Kontostand/Kontostände aus Blockstead 1.x warten auf die Übertragung, aber kein "
-                    + "Economy-Plugin ist über Vault erreichbar. Neuer Versuch beim nächsten Start.");
+            log.warning(pending.size() + " balance(s) from Blockstead 1.x are waiting to be transferred, but no "
+                    + "economy plugin is available through Vault. Trying again at the next start.");
             return;
         }
 
-        log.info("Übertrage " + pending.size() + " Kontostand/Kontostände aus Blockstead 1.x in das Economy-Plugin …");
+        log.info("Transferring " + pending.size() + " balance(s) from Blockstead 1.x to the economy plugin …");
         int done = 0;
         for (Map.Entry<UUID, Long> account : pending.entrySet()) {
             UUID uuid = account.getKey();
@@ -62,15 +62,15 @@ public final class BalanceImport {
                 result = Transaction.failed(e.toString());
             }
             if (!result.success()) {
-                log.warning("Kontostand NICHT übertragen: " + name + " (" + uuid + ") = " + balance + " – " + result.error()
-                        + ". Neuer Versuch beim nächsten Start.");
+                log.warning("Balance NOT transferred: " + name + " (" + uuid + ") = " + balance + " – " + result.error()
+                        + ". Trying again at the next start.");
                 continue;
             }
             markImported(database, uuid);
-            log.info("Kontostand übertragen: " + name + " (" + uuid + ") = " + balance);
+            log.info("Balance transferred: " + name + " (" + uuid + ") = " + balance);
             done++;
         }
-        log.info("Übertragung abgeschlossen: " + done + " von " + pending.size() + " Konto/Konten übertragen.");
+        log.info("Transfer finished: " + done + " of " + pending.size() + " account(s) transferred.");
     }
 
     /** Alle Konten ohne Zeitstempel, nach UUID sortiert (für ein gleichbleibendes Log). */
@@ -83,7 +83,7 @@ public final class BalanceImport {
                 pending.put(UUID.fromString(result.getString(1)), result.getLong(2));
             }
         } catch (SQLException e) {
-            throw new DataException("Alte Kontostände konnten nicht gelesen werden", e);
+            throw new DataException("Could not read old balances", e);
         }
         return pending;
     }
@@ -95,7 +95,7 @@ public final class BalanceImport {
             statement.setString(2, uuid.toString());
             statement.executeUpdate();
         } catch (SQLException e) {
-            throw new DataException("Übertragung von " + uuid + " konnte nicht vermerkt werden", e);
+            throw new DataException("Could not record the transfer of " + uuid, e);
         }
     }
 }

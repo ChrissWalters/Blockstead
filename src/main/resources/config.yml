@@ -1,93 +1,100 @@
-# Konfiguration von Blockstead.
-# Änderungen werden beim nächsten Serverstart übernommen.
+# Blockstead configuration.
+# Changes take effect after the next server restart.
 
-# Anzeige von LuckPerms-Präfixen/-Suffixen in Chat, Tab-Liste und über dem Kopf.
-# Nur aktiv, wenn LuckPerms (ab 5.5.85) installiert ist; sonst läuft das Plugin ohne (Warnung im Log).
-# Präfix/Suffix kommen fertig aus LuckPerms (meta-formatting), Farbcodes dort mit & (z.B. &c).
+# Language of the plugin's messages.
+#   auto – every player gets the language of their Minecraft client (default)
+#   <code> – a fixed language for everyone, e.g. de or en (the name of a file in lang/)
+# Bundled: en, de. Own or changed texts: plugins/Blockstead/lang/<code>.yml (see the comments in the
+# bundled files, or the documentation).
+language: auto
+# Language for the console and for client languages without a language file.
+fallback-language: en
+
+# LuckPerms prefixes/suffixes in chat, tab list and above the head (nametag).
+# Only active if LuckPerms (5.5.85 or newer) is installed; otherwise the plugin runs without (warning in the log).
+# Prefix/suffix come ready-made from LuckPerms (meta-formatting), colour codes there with & (e.g. &c).
 display:
-  # false = Chat und Tab-Liste nicht anfassen (z.B. wenn später ein Chat-Plugin das übernimmt).
+  # false = don't touch chat and tab list (e.g. if a chat plugin takes over later).
   enabled: true
-  # Vorlagen mit MiniMessage-Formatierung und den Platzhaltern {prefix}, {name}, {suffix}, {message}.
-  # Die Chat-Nachricht ({message}) erscheint immer als normaler Text – Farbcodes darin wirken nicht.
+  # Templates with MiniMessage formatting and the placeholders {prefix}, {name}, {suffix}, {message}.
+  # The chat message ({message}) is always shown as plain text – colour codes in it have no effect.
   chat-format: "{prefix}{name}{suffix}: {message}"
   tab-format: "{prefix}{name}{suffix}"
-  # Tab-Liste nach dem höchsten Gewicht der LuckPerms-Gruppen sortieren (höchstes oben).
+  # Sort the tab list by the highest weight of the LuckPerms groups (highest first).
   sort-tab-by-weight: true
-  # Präfix/Suffix auch über dem Kopf (Nametag) anzeigen.
+  # Show prefix/suffix above the head (nametag) as well.
   nametag: true
 
-# Login-Nachricht: wird jeder Person beim Betreten des Servers angezeigt (nur ihr selbst).
-# Eine Zeile pro Eintrag; leere Liste = keine Nachricht.
-# Formatierung mit MiniMessage-Tags, z.B. <gold>, <bold>, <gray>…</gray>
-# (Übersicht: https://docs.papermc.io/adventure/minimessage/format).
-# Adressen mit http:// oder https:// werden automatisch anklickbar (und bleiben sichtbar).
-# Klick-Aktionen, die einen Befehl ausführen (<click:run_command:…>), werden entfernt;
-# <click:suggest_command:…> (Befehl nur in die Chatzeile schreiben) geht.
-# Hinweis: Minecraft öffnet nur http(s)-Links. Für Teamspeak einen Einladungslink nutzen,
-# z.B. https://invite.teamspeak.com/ts.example.de – der öffnet Teamspeak.
-# Beispiel:
+# Join message: shown to every person when they join the server (only to them).
+# One line per entry; empty list = no message.
+# MiniMessage formatting, e.g. <gold>, <bold>, <gray>…</gray>
+# (overview: https://docs.papermc.io/adventure/minimessage/format).
+# Addresses starting with http:// or https:// become clickable automatically (and stay visible).
+# Clicks that run a command (<click:run_command:…>) are removed; <click:suggest_command:…> (only puts the
+# command into the chat line) works.
+# Note: Minecraft only opens http(s) links. For Teamspeak use an invite link,
+# e.g. https://invite.teamspeak.com/ts.example.org – it opens Teamspeak.
+# Example:
 #   join-info:
-#     - "<gold>Teamspeak:</gold> https://invite.teamspeak.com/ts.example.de"
-#     - "<gold>Discord:</gold> https://discord.gg/beispiel"
+#     - "<gold>Teamspeak:</gold> https://invite.teamspeak.com/ts.example.org"
+#     - "<gold>Discord:</gold> https://discord.gg/example"
 join-info: []
 
-# Server-Nachricht des Teams mit /announce <Nachricht> (z.B. vor Wartungen).
+# Server message from the team with /announce <message> (e.g. before maintenance).
 announce:
-  # Präfix im Chat (MiniMessage); wird auch als Überschrift der Einblendung verwendet.
+  # Prefix in the chat (MiniMessage); also used as the heading of the on-screen title.
   prefix: "<dark_red><bold>[Server]</bold></dark_red> "
-  # Zusätzlich groß auf dem Bildschirm einblenden.
+  # Also show it big on the screen.
   title: true
-  # Hinweiston abspielen.
+  # Play a notification sound.
   sound: true
 
 backups:
-  # Beim Serverstart werden data.db und die WorldGuard-Regionsdateien nach plugins/Blockstead/backups/
-  # gesichert – bevor das Plugin etwas ändert (wichtig bei Plugin-Updates mit Datenmigration).
+  # On every server start, data.db and the WorldGuard region files are copied to plugins/Blockstead/backups/
+  # – before the plugin changes anything (important for plugin updates with data migrations).
   enabled: true
-  # Wie viele Sicherungen erhalten bleiben; ältere werden beim Start gelöscht.
+  # How many backups are kept; older ones are deleted at startup.
   keep: 10
 
 economy:
-  # Seit Blockstead 2.0.0 führt ein Economy-Plugin (z.B. EssentialsX) die Kontostände, angebunden über
-  # Vault. Name/Zeichen der Währung und das Startguthaben neuer Spielender stellt man dort ein
-  # (bei EssentialsX: currency-symbol, starting-balance). Ohne Economy-Plugin kann man Grundstücke
-  # nicht kaufen; das Team kann sie weiterhin zuweisen.
+  # Balances are kept by an economy plugin (e.g. EssentialsX), connected through Vault. The currency's
+  # name/symbol and the starting balance of new players are set there (EssentialsX: currency-symbol,
+  # starting-balance). Without an economy plugin, plots can't be bought; staff can still assign them.
   #
-  # Kontostände aus Blockstead 1.x einmalig in das Economy-Plugin übertragen. Der Stand dort wird auf
-  # den alten Wert GESETZT (nicht addiert). Jedes Konto wird nur einmal übertragen; das Ergebnis steht
-  # im Server-Log ("Übertragung abgeschlossen: …"). false = alte Kontostände verwerfen.
+  # Transfer balances from Blockstead 1.x to the economy plugin once. The balance there is SET to the old
+  # value (not added). Every account is transferred only once; the result is in the server log
+  # ("Transfer finished: …"). false = discard the old balances.
   import-old-balances: true
 
 plots:
-  # Preis für "/plot claim" – ganze Zahl in der Währung des Economy-Plugins. Beim Freigeben
-  # ("/plot unclaim", "/plot unassign", "/plot remove") bekommt die Person, die bezahlt hat, den
-  # gezahlten Betrag zurück. 0 = kostenlos (geht auch ohne Economy-Plugin).
+  # Price for "/plot claim" – a whole number in the currency of the economy plugin. When a plot is given
+  # back or deleted ("/plot unclaim", "/plot unassign", "/plot remove"), the person who paid gets the
+  # amount back. 0 = free (works without an economy plugin, too).
   price: 100
 
-  # Wartezeit in Minuten zwischen zwei "/plot unclaim reset" derselben Person (0 = keine).
-  # Zurücksetzen ist für den Server aufwendig; das verhindert Missbrauch. Das Team ist ausgenommen.
+  # Waiting time in minutes between two "/plot unclaim reset" by the same person (0 = none).
+  # Restoring a plot is costly for the server; this prevents abuse. Staff are exempt.
   reset-cooldown-minutes: 10
 
-  # WorldGuard-Priorität neuer Grundstücke. Muss höher sein als die Priorität von Regionen,
-  # die Grundstücke überlappen (z.B. eine Stadt), damit die Flags des Grundstücks gelten.
+  # WorldGuard priority of new plots. Must be higher than the priority of regions that overlap plots
+  # (e.g. a city), so that the plot's flags apply.
   priority: 10
 
-  # WorldGuard-Flags, mit denen jedes neue Grundstück angelegt wird.
-  # Format: <Flagname>: <Wert> – wie bei "/rg flag <ID> <Flagname> <Wert>".
-  # Für Ja/Nein-Flags "allow" oder "deny" verwenden (nicht yes/no/true/false).
-  # Bereits angelegte Grundstücke werden nicht verändert.
+  # WorldGuard flags every new plot is created with.
+  # Format: <flag name>: <value> – as in "/rg flag <ID> <flag name> <value>".
+  # Use "allow" or "deny" for yes/no flags (not yes/no/true/false).
+  # Existing plots are not changed.
   #
-  # Achtung: Diese Flags gelten für ALLE, auch für Besitzende und Mitglieder. Schutz-Flags wie
-  # use, interact, chest-access oder build gehören deshalb NICHT hierher – Fremde dürfen auf einem
-  # Grundstück ohnehin nichts (WorldGuard-Mitgliedschaft), und was Mitglieder dürfen, regeln die
-  # Rollen weiter unten.
+  # Careful: these flags apply to EVERYONE, including owners and members. Protection flags like use,
+  # interact, chest-access or build therefore do NOT belong here – strangers can't do anything on a plot
+  # anyway (WorldGuard membership), and what members may do is defined by the roles below.
   default-flags:
-    # Kämpfe und Explosionen
+    # Fights and explosions
     pvp: deny
     tnt: deny
     creeper-explosion: deny
     other-explosion: deny
-    # Feuer und natürliche Ereignisse
+    # Fire and natural events
     fire-spread: deny
     lava-fire: deny
     lightning: deny
@@ -100,27 +107,30 @@ plots:
     entity-painting-destroy: deny
     entity-item-frame-destroy: deny
 
-# Rollen, die Besitzende auf ihrem Grundstück vergeben können ("/plot trust <Name> <Rolle>").
-# Die höchste Rolle "besitzende" ist fest eingebaut und darf alles, auch Rollen vergeben und
-# das Grundstück freigeben. Darunter beliebig viele eigene Rollen:
-#   <schlüssel>:              – wird im Befehl verwendet, nur Kleinbuchstaben/Ziffern/-/_
-#     name: <Anzeigename>
-#     rights: [<Rechte>]
-# Mögliche Rechte:
-#   build        – Bauen und Abbauen (auch Eimer, Werkzeuge wie Hacke/Axt, Knochenmehl, Schilder bearbeiten)
-#   containers   – Truhen, Fässer, Shulkerkisten, Trichter, Spender, Lesepulte usw.
-#   doors        – Türen, Falltüren, Zauntore, Knöpfe, Hebel, Druckplatten, Glocken
-#   workstations – Werkbank, Öfen, Ambosse, Verzauberungstisch, Braustand, Betten, Endertruhe usw.
-#   entities     – Tiere, Dorfbewohnende, Rüstungsständer, Rahmen (benutzen und angreifen)
-#   home         – "/plot home set" auf diesem Grundstück
-# Mitglieder ohne gespeicherte Rolle (z.B. per "/rg addmember" hinzugefügt) haben alle Rechte.
+# Roles that owners can give on their plot ("/plot trust <name> <role>").
+# The highest role "owner" is built in and may do everything, including giving roles and giving the plot
+# back (the old key "besitzende" still works). Below it, as many roles as you like:
+#   <key>:                  – used in the command; lowercase letters, digits, - and _ only
+#     name: <display name>  – optional; without it the name comes translated from the language file
+#                             (role.<key>), otherwise the key is shown
+#     aliases: [<keys>]     – optional; further keys that also mean this role (in commands and stored data)
+#     rights: [<rights>]
+# Possible rights:
+#   build        – build and break (also buckets, tools like hoe/axe, bone meal, editing signs)
+#   containers   – chests, barrels, shulker boxes, hoppers, dispensers, lecterns etc.
+#   doors        – doors, trapdoors, fence gates, buttons, levers, pressure plates, bells
+#   workstations – crafting table, furnaces, anvils, enchanting table, brewing stand, beds, ender chest etc.
+#   entities     – animals, villagers, armor stands, item frames (use and attack)
+#   home         – "/plot home set" on this plot
+# Members without a stored role (e.g. added with "/rg addmember") have all rights.
+# The aliases are the German keys used up to Blockstead 2.0 – keep them so existing data stays valid.
 roles:
-  mitbewohnende:
-    name: Mitbewohnende
+  resident:
+    aliases: [mitbewohnende]
     rights: [build, containers, doors, workstations, entities, home]
-  bauhilfe:
-    name: Bauhilfe
+  builder:
+    aliases: [bauhilfe]
     rights: [build, doors, workstations]
-  gast:
-    name: Gast
+  guest:
+    aliases: [gast]
     rights: [doors]

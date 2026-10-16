@@ -13,6 +13,6 @@ public record Transaction(boolean success, String error) {
     }
 
     static Transaction failed(String error) {
-        return new Transaction(false, error == null || error.isBlank() ? "unbekannter Fehler" : error);
+        return new Transaction(false, error == null || error.isBlank() ? "unknown error" : error);
     }
 }
