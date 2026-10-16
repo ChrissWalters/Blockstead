@@ -11,13 +11,18 @@ import com.github.chrisswalters.blockstead.storage.Database;
 import com.github.chrisswalters.blockstead.util.PlayerLookup;
 import com.github.chrisswalters.blockstead.util.WorldGuardUtils;
 import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.math.BlockVector2;
+import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldguard.protection.managers.RegionManager;
 import com.sk89q.worldguard.protection.managers.storage.StorageException;
+import com.sk89q.worldguard.protection.regions.ProtectedPolygonalRegion;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -29,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -374,20 +380,150 @@ public class PlotService {
         return true;
     }
 
+    /** Boden, auf dem man bei {@code /plot tp} nicht landen soll (Schaden oder Festhängen). */
+    private static final Set<Material> UNSAFE_GROUND = Set.of(
+            Material.LAVA, Material.FIRE, Material.SOUL_FIRE, Material.MAGMA_BLOCK, Material.CACTUS,
+            Material.CAMPFIRE, Material.SOUL_CAMPFIRE, Material.SWEET_BERRY_BUSH, Material.WITHER_ROSE,
+            Material.POWDER_SNOW, Material.POINTED_DRIPSTONE);
+
+    /** Höchstens so viele Spalten werden nach einem Landeplatz abgesucht (jede kann einen Chunk laden). */
+    private static final int MAX_LANDING_COLUMNS = 4096;
+
     /**
-     * Sicherer Teleportpunkt auf dem Grundstück: Mitte der Region auf dem obersten festen Block.
-     * Liegt die Mitte nicht im Grundstück (z.B. bei L-förmigen Polygonen), wird der erste Eckpunkt genommen.
+     * Sicherer Teleportpunkt auf dem Grundstück: spiralförmig vom {@link #landingCenter Mittelpunkt} aus der
+     * erste Punkt, der im Grundstück liegt und dessen oberster Block kein gefährlicher Boden ist
+     * ({@link #UNSAFE_GROUND}); gelandet wird einen Block darüber.
+     *
+     * @return leer, wenn kein sicherer Punkt gefunden wurde
      */
-    public Location getTeleportLocation(Plot plot) {
+    public Optional<Location> getTeleportLocation(Plot plot) {
         ProtectedRegion region = plot.region();
-        int x = (region.getMinimumPoint().x() + region.getMaximumPoint().x()) / 2;
-        int z = (region.getMinimumPoint().z() + region.getMaximumPoint().z()) / 2;
-        if (!region.contains(x, region.getMinimumPoint().y(), z)) {
-            x = region.getPoints().getFirst().x();
-            z = region.getPoints().getFirst().z();
+        World world = plot.world();
+        BlockVector3 min = region.getMinimumPoint();
+        BlockVector3 max = region.getMaximumPoint();
+        int[] center = landingCenter(region);
+        int centerX = center[0];
+        int centerZ = center[1];
+        // Weit genug, um vom Startpunkt aus das ganze umgebende Rechteck abzudecken
+        int radius = Math.max(Math.max(centerX - min.x(), max.x() - centerX), Math.max(centerZ - min.z(), max.z() - centerZ)) + 1;
+
+        int checked = 0;
+        for (int r = 0; r <= radius; r++) {
+            for (int[] column : ring(centerX, centerZ, r)) {
+                if (!region.contains(column[0], min.y(), column[1])) {
+                    continue;
+                }
+                if (++checked > MAX_LANDING_COLUMNS) {
+                    return Optional.empty();
+                }
+                Block ground = world.getHighestBlockAt(column[0], column[1]);
+                if (!UNSAFE_GROUND.contains(ground.getType()) && ground.getY() < world.getMaxHeight() - 2) {
+                    return Optional.of(ground.getLocation().add(0.5, 1, 0.5));
+                }
+            }
         }
-        int y = plot.world().getHighestBlockYAt(x, z);
-        return new Location(plot.world(), x + 0.5, y + 1, z + 0.5);
+        return Optional.empty();
+    }
+
+    /**
+     * Startpunkt der Suche – möglichst mittig im Grundstück. Bei Quadern die Mitte. Bei Polygonen in zwei
+     * Schritten:
+     * <ol>
+     *     <li>alle Punkte im Grundstück, die gut innen liegen: Randabstand mindestens 75 % des größten
+     *     Randabstands (bei einem 3 Blöcke breiten Schenkel also nur die Mittellinie, nie der Rand);</li>
+     *     <li>davon der Punkt, der dem Flächenschwerpunkt am nächsten liegt (sonst wäre bei schmalen Formen,
+     *     wo viele Punkte gleich weit vom Rand entfernt sind, z.B. auch das Ende eines Schenkels möglich).</li>
+     * </ol>
+     * Die Mitte des umgebenden Rechtecks allein läge bei einem L in der Einbuchtung, also außerhalb.
+     * Gerastert wird mit höchstens 33 × 33 Punkten; für die Landung reicht diese Genauigkeit.
+     */
+    private static int[] landingCenter(ProtectedRegion region) {
+        BlockVector3 min = region.getMinimumPoint();
+        BlockVector3 max = region.getMaximumPoint();
+        int[] boxCenter = {(min.x() + max.x()) / 2, (min.z() + max.z()) / 2};
+        if (!(region instanceof ProtectedPolygonalRegion polygon)) {
+            return boxCenter;
+        }
+        List<BlockVector2> points = polygon.getPoints();
+        double[] centroid = centroid(points, boxCenter);
+
+        int stepX = Math.max(1, (max.x() - min.x()) / 32);
+        int stepZ = Math.max(1, (max.z() - min.z()) / 32);
+        List<double[]> candidates = new ArrayList<>(); // {x, z, Randabstand}
+        double maxDistance = 0;
+        for (int x = min.x(); x <= max.x(); x += stepX) {
+            for (int z = min.z(); z <= max.z(); z += stepZ) {
+                if (region.contains(x, min.y(), z)) {
+                    double distance = distanceToEdges(points, x + 0.5, z + 0.5);
+                    candidates.add(new double[]{x, z, distance});
+                    maxDistance = Math.max(maxDistance, distance);
+                }
+            }
+        }
+
+        int[] best = boxCenter;
+        double bestToCentroid = Double.MAX_VALUE;
+        for (double[] candidate : candidates) {
+            if (candidate[2] < maxDistance * 0.75) {
+                continue;
+            }
+            double toCentroid = Math.hypot(candidate[0] + 0.5 - centroid[0], candidate[1] + 0.5 - centroid[1]);
+            if (toCentroid < bestToCentroid) {
+                bestToCentroid = toCentroid;
+                best = new int[]{(int) candidate[0], (int) candidate[1]};
+            }
+        }
+        return best;
+    }
+
+    /** Flächenschwerpunkt des Polygons (Gaußsche Trapezformel, Eckpunkte als Blockmitten); bei Fläche 0 der Ersatzwert. */
+    private static double[] centroid(List<BlockVector2> points, int[] fallback) {
+        double area = 0, sumX = 0, sumZ = 0;
+        for (int i = 0; i < points.size(); i++) {
+            BlockVector2 a = points.get(i);
+            BlockVector2 b = points.get((i + 1) % points.size());
+            double ax = a.x() + 0.5, az = a.z() + 0.5, bx = b.x() + 0.5, bz = b.z() + 0.5;
+            double cross = ax * bz - bx * az;
+            area += cross;
+            sumX += (ax + bx) * cross;
+            sumZ += (az + bz) * cross;
+        }
+        if (Math.abs(area) < 1e-9) {
+            return new double[]{fallback[0] + 0.5, fallback[1] + 0.5};
+        }
+        return new double[]{sumX / (3 * area), sumZ / (3 * area)};
+    }
+
+    /** Kleinster Abstand des Punkts zu den Kanten des Polygons (Eckpunkte als Blockmitten). */
+    private static double distanceToEdges(List<BlockVector2> points, double px, double pz) {
+        double nearest = Double.MAX_VALUE;
+        for (int i = 0; i < points.size(); i++) {
+            BlockVector2 a = points.get(i);
+            BlockVector2 b = points.get((i + 1) % points.size());
+            double ax = a.x() + 0.5, az = a.z() + 0.5, dx = b.x() - a.x(), dz = b.z() - a.z();
+            double lengthSquared = dx * dx + dz * dz;
+            double t = lengthSquared == 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / lengthSquared));
+            nearest = Math.min(nearest, Math.hypot(px - (ax + t * dx), pz - (az + t * dz)));
+        }
+        return nearest;
+    }
+
+    /** Alle Spalten auf dem Rand des Quadrats mit Abstand {@code r} um den Mittelpunkt. */
+    private static List<int[]> ring(int centerX, int centerZ, int r) {
+        List<int[]> columns = new ArrayList<>();
+        if (r == 0) {
+            columns.add(new int[]{centerX, centerZ});
+            return columns;
+        }
+        for (int i = -r; i <= r; i++) {
+            columns.add(new int[]{centerX + i, centerZ - r});
+            columns.add(new int[]{centerX + i, centerZ + r});
+        }
+        for (int i = -r + 1; i <= r - 1; i++) {
+            columns.add(new int[]{centerX - r, centerZ + i});
+            columns.add(new int[]{centerX + r, centerZ + i});
+        }
+        return columns;
     }
 
     // ---------------------------------------------------------------- intern

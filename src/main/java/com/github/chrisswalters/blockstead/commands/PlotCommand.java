@@ -364,7 +364,13 @@ public final class PlotCommand {
         return CommandSupport.run(player, () -> {
             Plot plot = findPlot(player, idArgument(context), world);
             if (plot == null) return false;
-            player.teleportAsync(plots().getTeleportLocation(plot));
+            Optional<Location> target = plots().getTeleportLocation(plot);
+            if (target.isEmpty()) {
+                player.sendMessage("Auf " + plot.id() + " gibt es keinen sicheren Landeplatz (nur Lava, Feuer o.Ä.). "
+                        + "Es wurde nicht teleportiert.");
+                return false;
+            }
+            player.teleportAsync(target.get());
             player.sendMessage("Teleportiert zu " + plot.id() + " (Welt " + plot.world().getName() + ").");
             return true;
         });
@@ -440,7 +446,10 @@ public final class PlotCommand {
             return true;
         }
         long waitMillis = config().getResetCooldownMinutes() * 60_000L;
-        long since = System.currentTimeMillis() - lastReset.getOrDefault(player.getUniqueId(), 0L);
+        long now = System.currentTimeMillis();
+        // Abgelaufene Einträge entfernen (nicht beim Verlassen – sonst ließe sich die Wartezeit per Relog umgehen)
+        lastReset.values().removeIf(time -> now - time >= waitMillis);
+        long since = now - lastReset.getOrDefault(player.getUniqueId(), 0L);
         if (since >= waitMillis) {
             return true;
         }

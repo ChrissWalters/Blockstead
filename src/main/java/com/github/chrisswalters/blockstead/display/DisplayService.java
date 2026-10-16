@@ -57,6 +57,8 @@ public class DisplayService {
                         apply(player);
                     }
                 }));
+        // Teams aus einem früheren Lauf, die nach einem Absturz mit der Welt gespeichert wurden
+        removeAllTeams();
         Bukkit.getOnlinePlayers().forEach(this::apply);
     }
 
@@ -65,6 +67,14 @@ public class DisplayService {
         if (subscription != null) {
             subscription.close();
         }
+        removeAllTeams();
+    }
+
+    /**
+     * Entfernt alle eigenen Teams ({@code bs_…}) vom Haupt-Scoreboard. Minecraft speichert dessen Teams mit
+     * der Welt; nach einem Absturz blieben sonst Teams von Personen liegen, die nicht wiederkommen.
+     */
+    private void removeAllTeams() {
         for (Team team : Bukkit.getScoreboardManager().getMainScoreboard().getTeams()) {
             if (team.getName().startsWith(TEAM_PREFIX)) {
                 team.unregister();

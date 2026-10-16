@@ -21,6 +21,8 @@ display:
 # Formatierung mit MiniMessage-Tags, z.B. <gold>, <bold>, <gray>…</gray>
 # (Übersicht: https://docs.papermc.io/adventure/minimessage/format).
 # Adressen mit http:// oder https:// werden automatisch anklickbar (und bleiben sichtbar).
+# Klick-Aktionen, die einen Befehl ausführen (<click:run_command:…>), werden entfernt;
+# <click:suggest_command:…> (Befehl nur in die Chatzeile schreiben) geht.
 # Hinweis: Minecraft öffnet nur http(s)-Links. Für Teamspeak einen Einladungslink nutzen,
 # z.B. https://invite.teamspeak.com/ts.example.de – der öffnet Teamspeak.
 # Beispiel:

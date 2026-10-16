@@ -19,6 +19,9 @@ import org.bukkit.command.CommandSender;
  */
 public final class InfoCommand {
 
+    /** Quellcode des Originals – angezeigt, wenn eine veränderte Fassung keine eigene {@code website} angibt. */
+    private static final String ORIGINAL_SOURCE = "https://github.com/ChrissWalters/Blockstead";
+
     private InfoCommand() {
     }
 
@@ -34,7 +37,9 @@ public final class InfoCommand {
         PluginMeta meta = Blockstead.getInstance().getPluginMeta();
         sender.sendMessage(TextFormat.format("<gold>" + meta.getName() + "</gold> " + meta.getVersion()
                 + " – Grundstücke, Rollen und mehr. Befehle: /plot"));
-        sender.sendMessage(TextFormat.format("Freie Software unter der GNU AGPL-3.0. Quellcode: " + meta.getWebsite()));
+        String website = meta.getWebsite();
+        String source = website == null || website.isBlank() ? ORIGINAL_SOURCE + " (Original)" : website;
+        sender.sendMessage(TextFormat.format("Freie Software unter der GNU AGPL-3.0. Quellcode: " + source));
         return Command.SINGLE_SUCCESS;
     }
 }

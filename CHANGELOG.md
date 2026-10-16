@@ -1,5 +1,21 @@
 # Änderungen
 
+## 2.0.1
+
+Fehlerbehebungen und Absicherung nach einer Durchsicht des gesamten Projekts.
+
+- `/plot tp` landet möglichst mittig und sicher: bei Polygonen auf einem Punkt mit gutem Abstand zum Rand,
+  nahe dem Flächenschwerpunkt (bei L-förmigen Grundstücken vorher: auf einem Eckpunkt am Rand), und nie auf
+  Lava, Feuer, Magma, Kaktus o.Ä. – sonst auf dem nächstgelegenen sicheren Punkt im Grundstück. Gibt es keinen,
+  wird nicht teleportiert.
+- Nametag-Teams (`bs_…`), die nach einem Absturz mit der Welt gespeichert blieben, werden beim Start entfernt.
+- `/announce` und `join-info`: Klick-Aktionen, die einen Befehl ausführen (`<click:run_command:…>`), werden
+  entfernt; Links und `suggest_command` bleiben.
+- `/blockstead` zeigt bei veränderten Fassungen ohne `website` in der plugin.yml den Link zum Original statt
+  „null“.
+- Abgelaufene Wartezeiten und Sicherheitsabfragen werden aus dem Speicher entfernt.
+- Build-Pipeline: Schreibrecht nur noch für den Release-Job bei Versions-Tags.
+
 ## 2.0.0
 
 Blockstead konzentriert sich auf Grundstücke. Allgemeine Befehle und die Währung übernimmt EssentialsX (bzw.

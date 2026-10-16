@@ -34,10 +34,11 @@ vergeben hat.
 |---|---|
 | Grundstücke | WorldGuard sperrt Fremde aus; Rollen schränken Mitglieder zusätzlich ein, nie umgekehrt |
 | Befehle | Jeder Unterbefehl prüft sein Recht; ohne Recht wird er gar nicht angezeigt |
-| Chat | Nachrichten von Spielenden werden nie als Formatierung gelesen (keine Farb-, Klick- oder Hover-Codes) |
+| Chat | Nachrichten von Spielenden werden nie als Formatierung gelesen (keine Farb-, Klick- oder Hover-Codes); in Team-Texten (`/announce`, `join-info`) sind Klicks, die Befehle ausführen, gesperrt |
 | Datenbank | Ausschließlich vorbereitete SQL-Statements |
 | Währung | Abbuchung vor der Vergabe des Grundstücks; Buchungen über das Economy-Plugin, fehlgeschlagene Erstattungen im Log |
 | Dateien | Namen von Sicherungsdateien werden auf sichere Zeichen reduziert |
 | Serverlast | Wartezeit zwischen zwei Zurücksetzungen durch Spielende |
+| Build | Die Pipeline läuft mit Leserecht; nur der Release-Job bei Versions-Tags darf schreiben |
 | Updates | Sicherung von Datenbank und Regionen bei jedem Start; kein Start mit einer neueren Datenbank |
 | Datenschutz | Keine Telemetrie, keine Verbindungen nach außen |

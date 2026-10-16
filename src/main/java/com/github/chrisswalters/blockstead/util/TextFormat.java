@@ -7,6 +7,7 @@ import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -14,7 +15,8 @@ import java.util.regex.Pattern;
  *
  * <p>Formatierung über MiniMessage-Tags, z.B. {@code <gold>}, {@code <bold>}, {@code <red>…</red>}
  * (Übersicht: https://docs.papermc.io/adventure/minimessage/format). Adressen mit {@code http://} oder
- * {@code https://} werden automatisch anklickbar und bleiben dabei als Adresse sichtbar.
+ * {@code https://} werden automatisch anklickbar und bleiben dabei als Adresse sichtbar. Klick-Aktionen, die
+ * einen Befehl ausführen ({@code run_command}), werden entfernt.
  *
  * <p>Nur für vertrauenswürdige Texte (config.yml, Team-Befehle) – niemals für Chat-Nachrichten von
  * Spielenden, sonst könnten diese Formatierung und Klick-Aktionen einschleusen.
@@ -40,6 +42,20 @@ public final class TextFormat {
 
     /** MiniMessage-Text mit anklickbaren Adressen. */
     public static Component format(String miniMessage) {
-        return MiniMessage.miniMessage().deserialize(miniMessage).replaceText(CLICKABLE_LINKS);
+        return withoutRunCommand(MiniMessage.miniMessage().deserialize(miniMessage).replaceText(CLICKABLE_LINKS));
+    }
+
+    /**
+     * Entfernt Klick-Aktionen, die beim Anklicken einen Befehl <em>ausführen</em> ({@code <click:run_command:…>}) –
+     * damit lassen sich Spielende nicht dazu bringen, mit einem Klick Befehle mit ihren eigenen Rechten
+     * auszuführen. Links und {@code suggest_command} (Befehl nur in die Chatzeile schreiben) bleiben erlaubt.
+     */
+    private static Component withoutRunCommand(Component component) {
+        ClickEvent<?> click = component.clickEvent();
+        if (click != null && click.action() == ClickEvent.Action.RUN_COMMAND) {
+            component = component.clickEvent(null);
+        }
+        List<Component> children = component.children();
+        return children.isEmpty() ? component : component.children(children.stream().map(TextFormat::withoutRunCommand).toList());
     }
 }

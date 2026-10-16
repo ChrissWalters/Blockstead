@@ -39,6 +39,7 @@ final class CommandSupport {
     static boolean confirmed(CommandSender sender, String action, String warning) {
         String senderKey = sender instanceof Player player ? player.getUniqueId().toString() : sender.getName();
         long now = System.currentTimeMillis();
+        pending.values().removeIf(entry -> entry.expiresAt() < now);
         PendingConfirmation open = pending.get(senderKey);
         if (open != null && open.action().equals(action) && open.expiresAt() >= now) {
             pending.remove(senderKey);

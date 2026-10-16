@@ -51,6 +51,11 @@ Offene Punkte, Erkenntnisse und Grundsatzentscheidungen aus der Entwicklung. Erg
   verwechseln. Rechte per `.requires(...)` blenden Befehle ohne Recht komplett aus.
 * Ein Recht mit `default: false` hat wirklich niemand – auch nicht Ops und die Konsole; Paper zeigt dann
   „Unknown command“.
+* Teams des Haupt-Scoreboards speichert Minecraft mit der Welt (`world/data/minecraft/scoreboard.dat`),
+  auch beim automatischen Speichern. Nach einem Absturz bleiben sie stehen – darum entfernt `DisplayService`
+  seine `bs_…`-Teams beim Start und beim Beenden.
+* MiniMessage erlaubt `<click:run_command:…>`: Wer klickt, führt den Befehl mit den eigenen Rechten aus.
+  `TextFormat` entfernt diese Klick-Aktion; Links und `suggest_command` bleiben.
 * Die Meldung `HorriblePlayerLoginEventHack` kommt von LuckPerms/WorldGuard und ist harmlos.
 
 **Economy (Vault/EssentialsX)**

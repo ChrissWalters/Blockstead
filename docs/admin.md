@@ -103,7 +103,7 @@ Welt) und **aus der Server-Konsole Pflicht**, z.B. `plot assign plot_3 Alex worl
 | `/plot unassign <ID> [Welt] [reset]` | Beliebiges Grundstück freigeben; Kaufpreis wird erstattet | `bs.plot.unassign` |
 | `/plot reset [ID] [Welt]` | Auf die Sicherung zurücksetzen, Besitz und Rollen bleiben | `bs.plot.reset` |
 | `/plot snapshot <ID> [Welt]` | Aktuellen Zustand als Sicherung zum Zurücksetzen speichern | `bs.plot.snapshot` |
-| `/plot tp <ID> [Welt]`, `/plot teleport …` | Zu einem Grundstück teleportieren (nur im Spiel) | `bs.plot.tp` |
+| `/plot tp <ID> [Welt]`, `/plot teleport …` | Zu einem Grundstück teleportieren – möglichst mittig (Abstand zum Rand, nahe dem Flächenschwerpunkt) und nie auf Lava, Feuer o.Ä. (nur im Spiel) | `bs.plot.tp` |
 | `/plot list <Name>` | Grundstücke einer anderen Person | `bs.plot.list.others` |
 | `/plot trust`, `/plot untrust` auf fremden Grundstücken | Rollen verwalten wie Besitzende | `bs.plot.trust.others` |
 | – | Wird von Grundstücks-Rollen nicht eingeschränkt | `bs.plot.bypass` |
@@ -147,7 +147,7 @@ einem Neustart.
 | Abschnitt | Inhalt |
 |---|---|
 | `display` | LuckPerms-Präfixe an/aus, Vorlagen für Chat und Tab-Liste (`{prefix}`, `{name}`, `{suffix}`, `{message}`), Sortierung der Tab-Liste nach Gruppengewicht, Nametag |
-| `join-info` | Login-Nachricht (z.B. Teamspeak, Discord); MiniMessage-Formatierung, `http(s)://`-Adressen werden anklickbar. Für Teamspeak einen Einladungslink wie `https://invite.teamspeak.com/<Adresse>` verwenden – Minecraft öffnet nur http(s)-Links |
+| `join-info` | Login-Nachricht (z.B. Teamspeak, Discord); MiniMessage-Formatierung (ohne `run_command`), `http(s)://`-Adressen werden anklickbar. Für Teamspeak einen Einladungslink wie `https://invite.teamspeak.com/<Adresse>` verwenden – Minecraft öffnet nur http(s)-Links |
 | `announce` | Präfix, Einblendung und Ton von `/announce` |
 | `backups` | Sicherung beim Start an/aus, Anzahl der aufbewahrten Sicherungen |
 | `economy` | `import-old-balances`: alte Kontostände aus 1.x einmalig übertragen (Währungsname und Startguthaben stellt man im Economy-Plugin ein) |
