@@ -7,6 +7,7 @@ import com.github.chrisswalters.blockstead.lang.Messages;
 import com.github.chrisswalters.blockstead.plots.Plot;
 import com.github.chrisswalters.blockstead.util.BlocksteadFlags;
 import com.github.chrisswalters.blockstead.util.PlayerLookup;
+import com.github.chrisswalters.blockstead.util.Selections;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -22,11 +23,13 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import com.sk89q.worldguard.protection.flags.StringFlag;
+import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -40,19 +43,23 @@ import java.util.stream.Collectors;
  *     <li>{@code /city list} – alle Städte</li>
  *     <li>{@code /city info [City]} – Infos zur Stadt (ohne Name: die Stadt, in der man steht)</li>
  *     <li>{@code /city free <City> [Seite]} – freie Grundstücke der Stadt (zusätzlich {@code bs.plot.free})</li>
+ *     <li>{@code /city teleport <City>} (Alias {@code tp}) – in die Stadt teleportieren ({@code bs.city.tp}, nur im Spiel)</li>
  * </ul>
  * Für das Team:
  * <ul>
  *     <li>{@code /city plots <City> [all|free|taken] [Seite]} – alle Grundstücke der Stadt ({@code bs.plot.list.all})</li>
- *     <li>{@code /city create <Name>}, {@code /city redefine <City>} – Stadt aus der WorldEdit-Auswahl anlegen bzw.
- *     ihre Fläche ändern (nur im Spiel), {@code /city remove <City>} – löschen, die Grundstücke bleiben
- *     ({@code bs.city.manage})</li>
+ *     <li>{@code /city create <Name> [bottom <Y>] [top <Y>|selection]}, {@code /city redefine <City> …} –
+ *     Stadt aus der WorldEdit-Auswahl anlegen bzw. ihre Fläche ändern, optional mit Höhengrenzen oder der Höhe der
+ *     Auswahl (nur im Spiel),
+ *     {@code /city remove <City>} – löschen, die Grundstücke bleiben ({@code bs.city.manage})</li>
+ *     <li>{@code /city setspawn <City> [none]} – Landepunkt für {@code /city tp} auf die eigene Position setzen
+ *     bzw. entfernen ({@code bs.city.manage})</li>
  *     <li>{@code /city price <City> <Betrag|none>} – Preis der Grundstücke in der Stadt ({@code bs.city.manage})</li>
  *     <li>{@code /city greeting|farewell <City> <Text|default|off>} – Begrüßung/Abschied ({@code bs.city.manage})</li>
  *     <li>{@code /city trust|untrust <City> <Name>} – wer in der Stadt bauen darf ({@code bs.city.trust})</li>
  * </ul>
- * Stadtnamen sind serverweit eindeutig, deshalb gibt es kein {@code [World]}; alles außer create, redefine und
- * info ohne Name geht auch aus der Konsole.
+ * Stadtnamen sind serverweit eindeutig, deshalb gibt es kein {@code [World]}; alles außer tp, create, redefine,
+ * setspawn ohne {@code none} und info ohne Name geht auch aus der Konsole.
  */
 public final class CityCommand {
 
@@ -90,14 +97,20 @@ public final class CityCommand {
                                 .then(PlotListCommand.page()
                                         .executes(CityCommand::free))))
                 .then(plots.then(plotsCity))
-                .then(Commands.literal("create")
-                        .requires(source -> source.getSender().hasPermission("bs.city.manage"))
-                        .then(Commands.argument("name", StringArgumentType.word())
-                                .executes(CityCommand::create)))
-                .then(Commands.literal("redefine")
+                .then(teleport("teleport"))
+                .then(teleport("tp"))
+                .then(Commands.literal("setspawn")
                         .requires(source -> source.getSender().hasPermission("bs.city.manage"))
                         .then(cityArgument()
-                                .executes(CityCommand::redefine)))
+                                .executes(context -> setSpawn(context, false))
+                                .then(Commands.literal("none")
+                                        .executes(context -> setSpawn(context, true)))))
+                .then(Commands.literal("create")
+                        .requires(source -> source.getSender().hasPermission("bs.city.manage"))
+                        .then(CommandSupport.withHeights(Commands.argument("name", StringArgumentType.word()), CityCommand::create)))
+                .then(Commands.literal("redefine")
+                        .requires(source -> source.getSender().hasPermission("bs.city.manage"))
+                        .then(CommandSupport.withHeights(cityArgument(), CityCommand::redefine)))
                 .then(Commands.literal("remove")
                         .requires(source -> source.getSender().hasPermission("bs.city.manage"))
                         .then(cityArgument()
@@ -134,9 +147,11 @@ public final class CityCommand {
         Messages.send(sender, "help.city-header");
         String[][] lines = {
                 {"bs.city", "help.city-list", "/city list"}, {"bs.city", "help.city-info", "/city info "},
+                {"bs.city.tp", "help.city-tp", "/city teleport "},
                 {"bs.plot.free", "help.city-free", "/city free "}, {"bs.plot.list.all", "help.city-plots", "/city plots "},
                 {"bs.city.manage", "help.city-create", "/city create "}, {"bs.city.manage", "help.city-redefine", "/city redefine "},
-                {"bs.city.manage", "help.city-remove", "/city remove "}, {"bs.city.manage", "help.city-price", "/city price "},
+                {"bs.city.manage", "help.city-remove", "/city remove "}, {"bs.city.manage", "help.city-setspawn", "/city setspawn "},
+                {"bs.city.manage", "help.city-price", "/city price "},
                 {"bs.city.manage", "help.city-greeting", "/city greeting "}, {"bs.city.manage", "help.city-farewell", "/city farewell "},
                 {"bs.city.trust", "help.city-trust", "/city trust "}, {"bs.city.trust", "help.city-untrust", "/city untrust "}};
         for (String[] line : lines) {
@@ -185,6 +200,10 @@ public final class CityCommand {
 
         List<Plot> plots = plotsOf(city);
         Messages.send(sender, "city.info-header", Messages.arg("city", city.name()), Messages.arg("world", city.world().getName()));
+        if (Selections.isHeightLimited(city.region(), city.world())) {
+            Messages.send(sender, "city.info-height", Messages.arg("bottom", city.region().getMinimumPoint().y()),
+                    Messages.arg("top", city.region().getMaximumPoint().y()));
+        }
         Messages.send(sender, "city.info-plots", Messages.arg("plots", plots.size()),
                 Messages.arg("free", plots.stream().filter(Plot::isFree).count()));
         Messages.send(sender, city.price().isPresent() ? "city.info-price-city" : "city.info-price-default",
@@ -195,8 +214,13 @@ public final class CityCommand {
                     Messages.arg("names", builders));
         }
         if (sender.hasPermission("bs.city.manage")) {
+            Messages.send(sender, cities().hasSpawn(city) ? "city.info-spawn-set" : "city.info-spawn-none");
             Messages.send(sender, "city.info-greeting", Messages.arg("text", describeText(sender, city, BlocksteadFlags.GREETING)));
             Messages.send(sender, "city.info-farewell", Messages.arg("text", describeText(sender, city, BlocksteadFlags.FAREWELL)));
+        }
+        if (sender instanceof Player && sender.hasPermission("bs.city.tp")) {
+            String command = "/city teleport " + city.name();
+            sender.sendMessage(clickable(sender, Messages.get(sender, "city.info-tp-hint", Messages.arg("command", command)), command));
         }
         if (sender.hasPermission("bs.plot.free") && plots.stream().anyMatch(Plot::isFree)) {
             String command = "/city free " + city.name();
@@ -224,7 +248,8 @@ public final class CityCommand {
     private static int create(CommandContext<CommandSourceStack> context) {
         Player player = CommandSupport.requirePlayer(context);
         if (player == null) return 0;
-        return cities().create(player, StringArgumentType.getString(context, "name")) ? Command.SINGLE_SUCCESS : 0;
+        return cities().create(player, StringArgumentType.getString(context, "name"), CommandSupport.heights(context))
+                ? Command.SINGLE_SUCCESS : 0;
     }
 
     /** Nur im Spiel: braucht die WorldEdit-Auswahl der Person. */
@@ -232,7 +257,44 @@ public final class CityCommand {
         Player player = CommandSupport.requirePlayer(context);
         if (player == null) return 0;
         City city = findCity(context);
-        return city != null && cities().redefine(player, city) ? Command.SINGLE_SUCCESS : 0;
+        return city != null && cities().redefine(player, city, CommandSupport.heights(context)) ? Command.SINGLE_SUCCESS : 0;
+    }
+
+    /** Unterbefehl {@code <name> <City>}; wird für "teleport" und den Alias "tp" gebaut. */
+    private static LiteralArgumentBuilder<CommandSourceStack> teleport(String name) {
+        return Commands.literal(name)
+                .requires(source -> source.getSender().hasPermission("bs.city.tp"))
+                .then(cityArgument()
+                        .executes(CityCommand::teleport));
+    }
+
+    /** Nur im Spiel; mit Wartezeit zwischen zwei Teleports ({@link CommandSupport#teleportAllowed}, Team ausgenommen). */
+    private static int teleport(CommandContext<CommandSourceStack> context) {
+        Player player = CommandSupport.requirePlayer(context);
+        if (player == null) return 0;
+        City city = findCity(context);
+        if (city == null) return 0;
+        if (!CommandSupport.teleportAllowed(player, "bs.city.manage")) return 0;
+        Optional<Location> target = cities().getTeleportLocation(city);
+        if (target.isEmpty()) {
+            Messages.send(player, "city.tp-no-spot", Messages.arg("city", city.name()));
+            return 0;
+        }
+        player.teleportAsync(target.get());
+        Messages.send(player, "city.tp-done", Messages.arg("city", city.name()));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    /** Nur im Spiel (die eigene Position wird der Landepunkt); mit {@code none} wird er entfernt. */
+    private static int setSpawn(CommandContext<CommandSourceStack> context, boolean clear) {
+        City city = findCity(context);
+        if (city == null) return 0;
+        if (clear) {
+            return cities().clearSpawn(context.getSource().getSender(), city) ? Command.SINGLE_SUCCESS : 0;
+        }
+        Player player = CommandSupport.requirePlayer(context);
+        if (player == null) return 0;
+        return cities().setSpawn(player, city) ? Command.SINGLE_SUCCESS : 0;
     }
 
     private static int remove(CommandContext<CommandSourceStack> context) {

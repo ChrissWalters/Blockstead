@@ -2,6 +2,28 @@
 
 *Auf Deutsch: [CHANGELOG.de.md](CHANGELOG.de.md)*
 
+## 2.4.0
+
+City teleport and height limits.
+
+### New
+- `/city teleport <City>` (short `/city tp`) for everyone (permission `bs.city.tp`): to the city's landing point
+  or, without one, to a safe spot as central as possible, preferably not on a plot.
+- `/city setspawn <City> [none]` (staff): landing point at your own position, must be inside the city; stored
+  as WorldGuard's `teleport` flag. `/city create` reminds you to set it.
+- Optional height limits: `/plot create [bottom <Y>] [top <Y>]`, the same for `/city create` and
+  `/city redefine` – only bottom, only top, both or none (whole world height as before). Alternatively
+  `selection`: exactly the height of the WorldEdit selection (for storeys).
+- Plots may lie on top of each other (e.g. flats) as long as they don't overlap; a plot belongs to the city
+  with the largest shared space. Warning when a height-limited plot is not in a city.
+- `/plot info` and `/city info` show the height when it is limited; `/city info` shows a clickable teleport
+  and, for staff, whether a landing point is set.
+
+### Changed
+- `/plot teleport` (short `tp`) lands inside the height of the plot (on the floor of a storey instead of the
+  roof); the help shows the long form.
+- At least one second between two teleports of a person with `/plot home` and `/city teleport` (staff exempt).
+
 ## 2.3.0
 
 Cities: city areas as part of Blockstead – protection of the city's own buildings, greeting, price per city.

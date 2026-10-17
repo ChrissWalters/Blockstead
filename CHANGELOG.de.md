@@ -2,6 +2,30 @@
 
 *In English: [CHANGELOG.md](CHANGELOG.md)*
 
+## 2.4.0
+
+Teleport in Städte und Höhengrenzen.
+
+### Neu
+- `/city teleport <City>` (kurz `/city tp`) für alle (Recht `bs.city.tp`): zum Landepunkt der Stadt oder, ohne
+  Landepunkt, zu einem sicheren Punkt möglichst mittig, nach Möglichkeit nicht auf einem Grundstück.
+- `/city setspawn <City> [none]` (Team): Landepunkt an der eigenen Position, muss in der Stadt liegen;
+  gespeichert als WorldGuard-Flag `teleport`. `/city create` erinnert daran.
+- Optionale Höhengrenzen: `/plot create [bottom <Y>] [top <Y>]`, ebenso für `/city create` und
+  `/city redefine` – nur unten, nur oben, beides oder nichts (ganze Welthöhe wie bisher). Alternativ
+  `selection`: genau die Höhe der WorldEdit-Auswahl (für Stockwerke).
+- Grundstücke dürfen übereinander liegen (z.B. Wohnungen), solange sie sich nicht überschneiden; ein
+  Grundstück gehört zur Stadt mit dem größten gemeinsamen Raum. Warnung, wenn ein Grundstück mit Höhengrenze in
+  keiner Stadt liegt.
+- `/plot info` und `/city info` zeigen die Höhe, wenn sie begrenzt ist; `/city info` zeigt einen anklickbaren
+  Teleport und fürs Team, ob ein Landepunkt gesetzt ist.
+
+### Geändert
+- `/plot teleport` (kurz `tp`) landet innerhalb der Höhe des Grundstücks (auf dem Boden eines Geschosses statt
+  auf dem Dach); die Hilfe zeigt die Langform.
+- Mindestens eine Sekunde zwischen zwei Teleports einer Person mit `/plot home` und `/city teleport` (Team
+  ausgenommen).
+
 ## 2.3.0
 
 Städte: Stadtgebiete als Teil von Blockstead – Schutz der städtischen Bauten, Begrüßung, Preis je Stadt.

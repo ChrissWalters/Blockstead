@@ -45,8 +45,14 @@ Open points, findings and design decisions from development. Adds the "why" to
   `blockstead-farewell`), not in `data.db`: WorldGuard stays the source of truth and the database format (and
   thus the way back to an older version) stays unchanged. WorldGuard keeps unknown flags when an older version
   without them is running.
-* **Which city a plot belongs to is always computed**, never stored: sharing one block column is enough; with
-  several cities the largest shared area wins. Cities must not overlap each other.
+* **Which city a plot belongs to is always computed**, never stored: sharing one block is enough; with
+  several cities the largest shared space wins. Cities must not overlap each other.
+* **Heights are 3D for free:** WorldGuard's `getIntersectingRegions` first compares the bounding boxes
+  including Y, so stacked plots (or cities) with separate heights don't count as overlapping – no change to
+  `PlotOverlaps` was needed. Snapshots follow the region bounds, too.
+* **WorldGuard's teleport flag** is `Flags.TELE_LOC` (flag name `teleport`), a `LocationFlag` with a WorldEdit
+  `Location`; after a restart it is a lazy location without a loaded world – build the Bukkit location from
+  x/y/z/yaw/pitch and the city's world instead of `BukkitAdapter.adapt`.
 * **Bukkit config defaults:** `getConfigurationSection` / `isConfigurationSection` also see the defaults from the
   jar's `config.yml` – use `contains(path, true)` to check whether an entry is really in the server's file
   (used for `cities.default-flags` in configs from before 2.3.0).

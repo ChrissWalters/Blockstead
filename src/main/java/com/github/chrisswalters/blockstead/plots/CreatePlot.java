@@ -18,8 +18,8 @@ import java.util.stream.Collectors;
 /**
  * Legt Grundstücke (Plots) als WorldGuard-Regionen aus einer WorldEdit-Auswahl an.
  *
- * <p>Ein Plot reicht immer vom tiefsten bis zum höchsten Punkt der Welt, unabhängig von der Höhe
- * der Auswahl ({@link Selections}). Überlappungen mit anderen Grundstücken werden abgelehnt, bei anderen Regionen mit zu
+ * <p>Ein Plot reicht vom tiefsten bis zum höchsten Punkt der Welt, unabhängig von der Höhe der Auswahl, oder
+ * zwischen den beim Anlegen angegebenen Höhen ({@link Selections}). Überlappungen mit anderen Grundstücken werden abgelehnt, bei anderen Regionen mit zu
  * hoher Priorität gibt es eine Warnung ({@link PlotOverlaps}). Neue Plots haben noch keine Besitzenden und Mitglieder. Direkt nach dem Anlegen
  * wird der Zustand gesichert ({@link SnapshotService}), damit das Grundstück später zurückgesetzt werden kann.
  */
@@ -29,15 +29,17 @@ public class CreatePlot {
     public static final String PLOT_PREFIX = "plot_";
 
     /**
-     * Legt aus der aktuellen WorldEdit-Auswahl der ausführenden Person einen neuen Plot an.
+     * Legt aus der aktuellen WorldEdit-Auswahl der ausführenden Person einen neuen Plot an, optional mit
+     * Höhengrenzen. Grundstücke dürfen dann auch übereinander liegen (z.B. Wohnungen), solange sie sich nicht
+     * überschneiden.
      * Flags und Priorität kommen aus der config.yml ({@link PluginConfig}).
      * Rückmeldungen gehen direkt an diese Person.
      *
      * @return {@code true}, wenn der Plot angelegt wurde
      */
-    public static boolean createPlot(Player player) {
+    public static boolean createPlot(Player player, Selections.Heights heights) {
         Selections.Shape shape = Selections.read(player);
-        if (shape == null) {
+        if (shape == null || !shape.checkHeights(player, heights)) {
             return false;
         }
         World selectionWorld = shape.weWorld();
@@ -48,7 +50,7 @@ public class CreatePlot {
         }
 
         String plotId = nextFreePlotId(regionManager);
-        ProtectedRegion plot = shape.toRegion(plotId);
+        ProtectedRegion plot = shape.toRegion(plotId, heights);
 
         // Grundstücke dürfen sich nicht überlappen (siehe PlotOverlaps)
         List<ProtectedRegion> overlapping = PlotOverlaps.overlappingPlots(plot, regionManager);
@@ -69,9 +71,14 @@ public class CreatePlot {
             Messages.send(player, "create.priority-warning", Messages.arg("regions", PlotOverlaps.describe(conflicting, true)),
                     Messages.arg("priority", config.getPlotPriority()));
         }
-        // Zu welcher Stadt das Grundstück gehört – bei mehreren gilt die mit der größten gemeinsamen Fläche
+        // Zu welcher Stadt das Grundstück gehört – bei mehreren gilt die mit dem größten gemeinsamen Raum
         Plot created = new Plot(shape.world(), plot);
         List<City> cities = Blockstead.getCities().citiesTouching(created);
+        if (heights.limited() && cities.isEmpty()) {
+            // Über bzw. unter dem Grundstück gelten dessen Regeln nicht; ohne Stadt schützt dort nichts
+            Messages.send(player, "create.height-unprotected", Messages.arg("bottom", plot.getMinimumPoint().y()),
+                    Messages.arg("top", plot.getMaximumPoint().y()));
+        }
         if (cities.size() == 1) {
             Messages.send(player, "create.in-city", Messages.arg("city", cities.getFirst().name()));
         } else if (cities.size() > 1) {

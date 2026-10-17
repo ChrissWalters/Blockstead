@@ -10,6 +10,7 @@ import com.github.chrisswalters.blockstead.plots.Plot;
 import com.github.chrisswalters.blockstead.plots.PlotService;
 import com.github.chrisswalters.blockstead.roles.PlotRight;
 import com.github.chrisswalters.blockstead.util.PlayerLookup;
+import com.github.chrisswalters.blockstead.util.Selections;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -65,13 +66,14 @@ import java.util.stream.Collectors;
  * Für das Team:
  * <ul>
  *     <li>{@code /plot list <Name>} – Grundstücke einer anderen Person ({@code bs.plot.list.others})</li>
- *     <li>{@code /plot create} – Grundstück aus der WorldEdit-Auswahl anlegen ({@code bs.plot.create})</li>
+ *     <li>{@code /plot create [bottom <Y>] [top <Y>|selection]} – Grundstück aus der WorldEdit-Auswahl anlegen,
+ *     optional mit Höhengrenzen oder der Höhe der Auswahl ({@code bs.plot.create})</li>
  *     <li>{@code /plot remove <ID> [World] [reset]} – Grundstück löschen ({@code bs.plot.remove})</li>
  *     <li>{@code /plot assign <ID> <Name> [World]} – freies Grundstück kostenlos zuweisen ({@code bs.plot.assign})</li>
  *     <li>{@code /plot unassign <ID> [World] [reset]} – beliebiges Grundstück freigeben ({@code bs.plot.unassign})</li>
  *     <li>{@code /plot reset [ID] [World]} – auf die Sicherung zurücksetzen, Besitz und Rollen bleiben ({@code bs.plot.reset})</li>
  *     <li>{@code /plot snapshot <ID> [World]} – aktuellen Zustand als Sicherung zum Zurücksetzen speichern ({@code bs.plot.snapshot})</li>
- *     <li>{@code /plot tp <ID> [World]} (Alias {@code teleport}) – zu einem Grundstück teleportieren ({@code bs.plot.tp})</li>
+ *     <li>{@code /plot teleport <ID> [World]} (Alias {@code tp}) – zu einem Grundstück teleportieren ({@code bs.plot.tp})</li>
  *     <li>{@code /plot plots [all|free|taken] [World|*] [Seite]} – alle Grundstücke auflisten ({@code bs.plot.list.all})</li>
  *     <li>{@code /plot price <ID> <Betrag|none> [World]} – eigener Preis des Grundstücks, geht vor dem Preis der Stadt
  *     ({@code bs.plot.price})</li>
@@ -148,11 +150,10 @@ public final class PlotCommand {
                                 .executes(context -> untrust(context, null, null))
                                 .then(idWithWorld(PlotCommand::canManage, false,
                                         (context, world, reset) -> untrust(context, idArgument(context), world)))))
-                .then(teleport("tp"))
                 .then(teleport("teleport"))
-                .then(Commands.literal("create")
-                        .requires(source -> source.getSender().hasPermission("bs.plot.create"))
-                        .executes(PlotCommand::create))
+                .then(teleport("tp"))
+                .then(CommandSupport.withHeights(Commands.literal("create")
+                        .requires(source -> source.getSender().hasPermission("bs.plot.create")), PlotCommand::create))
                 .then(Commands.literal("remove")
                         .requires(source -> source.getSender().hasPermission("bs.plot.remove"))
                         .then(idWithWorld((player, plot) -> true, true, PlotCommand::remove)))
@@ -221,7 +222,7 @@ public final class PlotCommand {
             helpLine(sender, "help.untrust", "/plot untrust ");
         }
         String[][] staffLines = {
-                {"bs.plot.tp", "help.tp", "/plot tp "}, {"bs.plot.list.others", "help.list-others", "/plot list "},
+                {"bs.plot.tp", "help.tp", "/plot teleport "}, {"bs.plot.list.others", "help.list-others", "/plot list "},
                 {"bs.plot.list.all", "help.plots", "/plot plots "},
                 {"bs.plot.create", "help.create", "/plot create"}, {"bs.plot.remove", "help.remove", "/plot remove "},
                 {"bs.plot.assign", "help.assign", "/plot assign "}, {"bs.plot.unassign", "help.unassign", "/plot unassign "},
@@ -251,6 +252,10 @@ public final class PlotCommand {
 
             Messages.send(sender, "info.header", Messages.arg("id", plot.id()), Messages.arg("world", plot.world().getName()));
             Blockstead.getCities().cityOf(plot).ifPresent(city -> Messages.send(sender, "info.city", Messages.arg("city", city.name())));
+            if (Selections.isHeightLimited(plot.region(), plot.world())) {
+                Messages.send(sender, "info.height", Messages.arg("bottom", plot.region().getMinimumPoint().y()),
+                        Messages.arg("top", plot.region().getMaximumPoint().y()));
+            }
             PlotService.Price price = plots().priceOf(plot);
             if (plot.isFree()) {
                 Messages.send(sender, "info.free", Messages.arg("id", plot.id()),
@@ -328,9 +333,11 @@ public final class PlotCommand {
         });
     }
 
+    /** Mit Wartezeit zwischen zwei Teleports ({@link CommandSupport#teleportAllowed}, Team ausgenommen). */
     private static int home(CommandContext<CommandSourceStack> context) {
         Player player = CommandSupport.requirePlayer(context);
         if (player == null) return 0;
+        if (!CommandSupport.teleportAllowed(player, "bs.plot.tp")) return 0;
         return CommandSupport.run(player, () -> {
             Optional<HomeService.Home> home = homes().getHome(player.getUniqueId());
             if (home.isEmpty()) {
@@ -414,7 +421,7 @@ public final class PlotCommand {
     private static int create(CommandContext<CommandSourceStack> context) {
         Player player = CommandSupport.requirePlayer(context);
         if (player == null) return 0;
-        return CreatePlot.createPlot(player) ? Command.SINGLE_SUCCESS : 0;
+        return CreatePlot.createPlot(player, CommandSupport.heights(context)) ? Command.SINGLE_SUCCESS : 0;
     }
 
     private static int remove(CommandContext<CommandSourceStack> context, World world, boolean reset) {
@@ -543,7 +550,7 @@ public final class PlotCommand {
         return id.then(world);
     }
 
-    /** Unterbefehl {@code <name> <ID> [World]}; wird für "tp" und "teleport" gebaut. */
+    /** Unterbefehl {@code <name> <ID> [World]}; wird für "teleport" und den Alias "tp" gebaut. */
     private static LiteralArgumentBuilder<CommandSourceStack> teleport(String name) {
         return Commands.literal(name)
                 .requires(source -> source.getSender().hasPermission("bs.plot.tp"))

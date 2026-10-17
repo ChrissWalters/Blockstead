@@ -39,6 +39,13 @@ Währung selbst kommen von EssentialsX (bzw. einem anderen Plugin).
 3. Hinweise zur jeweiligen Version in [CHANGELOG.de.md](../CHANGELOG.de.md) lesen – insbesondere neue
    Einträge der `config.yml`, die nicht automatisch ergänzt werden.
 
+### Von 2.2.x/2.3.x auf 2.4.0
+
+* Neu sind `/city teleport` (Recht `bs.city.tp`, alle – ergänzen, wenn Spielende ihre Rechte in LuckPerms
+  ausdrücklich bekommen), `/city setspawn` und optionale Höhen (`bottom`, `top` oder `selection`) für
+  `/plot create`, `/city create` und `/city redefine`. `/plot home` hat jetzt ebenfalls die Wartezeit von
+  einer Sekunde. Bestehende Grundstücke und Städte bleiben unverändert.
+
 ### Von 2.2.x auf 2.3.0
 
 * **Städte** sind neu (siehe [Städte](#städte)). Bestehende Grundstücke und WorldGuard-Regionen bleiben
@@ -100,9 +107,20 @@ Details im [CHANGELOG](../CHANGELOG.de.md).
 Grundstücke sind WorldGuard-Regionen mit der ID `plot_<Nummer>`:
 
 1. Mit WorldEdit eine Fläche auswählen – Quader (`//wand`, zwei Punkte) oder Polygon (`//sel poly`).
-   Die Höhe spielt keine Rolle: Grundstücke reichen immer vom tiefsten bis zum höchsten Punkt der Welt.
+   Die Höhe der Auswahl spielt keine Rolle.
 2. `/plot create` – legt das Grundstück mit den Standard-Flags aus der `config.yml` an und sichert seinen
-   Zustand (für das spätere Zurücksetzen).
+   Zustand (für das spätere Zurücksetzen). Ohne weitere Angaben reicht es vom tiefsten bis zum höchsten Punkt
+   der Welt.
+
+**Höhengrenzen (optional):** `/plot create bottom <Y>`, `/plot create top <Y>` oder beides, in beliebiger
+Reihenfolge (z.B. `/plot create bottom 60 top 70`; beide Werte gehören dazu) – oder `/plot create selection`:
+genau die Höhe der WorldEdit-Auswahl, praktisch für Stockwerke. Alle Höhen sind absolute Y-Koordinaten (F3
+oder die Meldung von `//pos1` zeigt sie). Relativ zur Auswahl: erst mit WorldEdit erweitern, z.B.
+`//expand 60 up` oder `//expand 80 down`, dann `/plot create selection`. Grundstücke dürfen dann auch
+übereinander liegen – z.B. Wohnungen in einem Haus –, solange sie sich nicht überschneiden. Über und unter so
+einem Grundstück gelten dessen Regeln nicht; in einer Stadt schützt die Stadt diesen Raum, außerhalb von
+Städten nichts (`/plot create` warnt). `/plot info` zeigt die Höhe nur, wenn sie begrenzt ist; `/plot tp`
+landet innerhalb der Höhe (auf dem Boden eines Geschosses, nicht auf dem Dach).
 
 Neue Grundstücke haben keine Besitzenden. Spielende kaufen sie mit `/plot claim`, das Team vergibt sie
 mit `/plot assign`. Beim Betreten erscheint die übersetzte Standardmeldung; einen eigenen Text setzt du mit
@@ -127,7 +145,8 @@ alle Sprachen).
 ## Städte
 
 Eine Stadt ist eine WorldGuard-Region, die Blockstead verwaltet (`city_<Name>`), vom tiefsten bis zum höchsten
-Punkt der Welt. Sie schützt alles, was der Stadt selbst gehört:
+Punkt der Welt – oder, mit `bottom <Y>` / `top <Y>` wie bei Grundstücken, zwischen festen Höhen (z.B. eine
+Stadt unter der Erde). Sie schützt alles, was der Stadt selbst gehört:
 
 * **Außerhalb der Grundstücke** bauen nur die Personen, die mit `/city trust` eingetragen sind – Straßen,
   Plätze und Gebäude der Stadt lassen sich nicht griefen. Das Team mit WorldGuard-Bypass (`/rg bypass`) kann
@@ -135,10 +154,16 @@ Punkt der Welt. Sie schützt alles, was der Stadt selbst gehört:
 * **Auf Grundstücken** zählt nur das Grundstück (Grundstücke haben die höhere Priorität, `plots.priority` >
   `cities.priority`): Besitzende und Rollen funktionieren wie bisher, wer in der Stadt bauen darf, hat dort
   keine Rechte.
-* Ein Grundstück **gehört zu einer Stadt**, wenn es mindestens eine Blockspalte mit ihr teilt – auch wenn es
-  über die Stadtgrenze hinausragt. Berührt es mehrere Städte, gilt die mit der größten gemeinsamen Fläche
-  (`/plot create` weist darauf hin). Städte dürfen sich nicht überlappen. Grundstücke außerhalb von Städten
-  funktionieren wie bisher.
+* Ein Grundstück **gehört zu einer Stadt**, wenn es mindestens einen Block mit ihr teilt – auch wenn es über
+  die Stadtgrenze hinausragt. Berührt es mehrere Städte, gilt die mit dem größten gemeinsamen Raum
+  (`/plot create` weist darauf hin). Städte dürfen sich nicht überlappen (übereinander geht). Grundstücke
+  außerhalb von Städten funktionieren wie bisher.
+* **Teleport:** `/city teleport <City>` (kurz `/city tp`) bringt alle zum Landepunkt der Stadt. Das Team setzt
+  ihn mit `/city setspawn <City>` an der eigenen Position (mit Blickrichtung; sie muss in der Stadt liegen –
+  `/city create` erinnert daran). Ohne Landepunkt sucht Blockstead einen sicheren Punkt möglichst mittig, nach
+  Möglichkeit nicht auf einem Grundstück. Zwischen zwei Teleports einer Person (`/city teleport` und
+  `/plot home`) liegt mindestens eine Sekunde (Team ausgenommen). Der Landepunkt ist WorldGuards Flag `teleport` –
+  `/rg teleport city_<name>` landet also ebenfalls dort.
 * **Preis** eines Grundstücks: eigener Preis (`/plot price`) > Preis seiner Stadt (`/city price`) >
   `plots.price`. Erstattet wird immer der tatsächlich bezahlte Betrag.
 * **Begrüßung und Abschied:** Beim Betreten und Verlassen sehen alle einen übersetzten Standardtext
@@ -152,16 +177,19 @@ Punkt der Welt. Sie schützt alles, was der Stadt selbst gehört:
 | `/city list` | Alle Städte mit Grundstücken, freien Grundstücken und Preis | `bs.city` |
 | `/city info [City]` | Grundstücke, Preis; fürs Team auch Baurechte, Begrüßung und Abschied | `bs.city` |
 | `/city free <City> [Seite]` | Freie Grundstücke der Stadt | `bs.plot.free` |
+| `/city teleport <City>`, `/city tp …` | In die Stadt teleportieren (nur im Spiel) | `bs.city.tp` |
 | `/city plots <City> [all\|free\|taken] [Seite]` | Alle Grundstücke der Stadt, wie `/plot plots` | `bs.plot.list.all` |
-| `/city create <Name>` | Stadt aus der WorldEdit-Auswahl anlegen (nur im Spiel); Name: Buchstaben, Ziffern, `-`, `_`, auf dem Server eindeutig | `bs.city.manage` |
-| `/city redefine <City>` | Fläche durch die WorldEdit-Auswahl ersetzen; alles andere bleibt (nur im Spiel) | `bs.city.manage` |
+| `/city create <Name> [bottom <Y>] [top <Y>\|selection]` | Stadt aus der WorldEdit-Auswahl anlegen (nur im Spiel); Name: Buchstaben, Ziffern, `-`, `_`, auf dem Server eindeutig | `bs.city.manage` |
+| `/city redefine <City> [bottom <Y>] [top <Y>\|selection]` | Fläche durch die WorldEdit-Auswahl ersetzen; alles andere bleibt (nur im Spiel; ein Landepunkt außerhalb der neuen Fläche wird entfernt) | `bs.city.manage` |
+| `/city setspawn <City> [none]` | Landepunkt für `/city teleport` an der eigenen Position (nur im Spiel); `none` entfernt ihn | `bs.city.manage` |
 | `/city remove <City>` | Stadt löschen (mit Sicherheitsabfrage); ihre Grundstücke bleiben | `bs.city.manage` |
 | `/city price <City> <Betrag\|none>` | Preis der Grundstücke in der Stadt; `none` = Standardpreis | `bs.city.manage` |
 | `/city greeting <City> <Text\|default\|off>` | Meldung beim Betreten | `bs.city.manage` |
 | `/city farewell <City> <Text\|default\|off>` | Meldung beim Verlassen | `bs.city.manage` |
 | `/city trust <City> <Name>`, `/city untrust <City> <Name>` | Wer in der Stadt außerhalb der Grundstücke bauen darf | `bs.city.trust` |
 
-Alles außer `create`, `redefine` und `info` ohne Name geht auch aus der Konsole.
+Alles außer `tp`, `create`, `redefine`, `setspawn` (ohne `none`) und `info` ohne Name geht auch aus der
+Konsole.
 
 **Flags einer Stadt gelten auch auf ihren Grundstücken**, solange ein Grundstück die Flag nicht selbst setzt
 (WorldGuard nimmt den Wert der höchsten Priorität, die sie setzt). Deshalb ignoriert `cities.default-flags`
@@ -186,13 +214,13 @@ Welt) und **aus der Server-Konsole Pflicht**, z.B. `plot assign plot_3 Alex worl
 
 | Befehl | Beschreibung | Recht |
 |---|---|---|
-| `/plot create` | Grundstück aus der WorldEdit-Auswahl anlegen (nur im Spiel) | `bs.plot.create` |
+| `/plot create [bottom <Y>] [top <Y>\|selection]` | Grundstück aus der WorldEdit-Auswahl anlegen, optional mit Höhengrenzen oder der Höhe der Auswahl (nur im Spiel) | `bs.plot.create` |
 | `/plot remove <ID> [World] [reset]` | Grundstück löschen; Kaufpreis wird erstattet | `bs.plot.remove` |
 | `/plot assign <ID> <Name> [World]` | Freies Grundstück kostenlos zuweisen (auch an Personen, die offline sind) | `bs.plot.assign` |
 | `/plot unassign <ID> [World] [reset]` | Beliebiges Grundstück freigeben; Kaufpreis wird erstattet | `bs.plot.unassign` |
 | `/plot reset [ID] [World]` | Auf die Sicherung zurücksetzen, Besitz und Rollen bleiben | `bs.plot.reset` |
 | `/plot snapshot <ID> [World]` | Aktuellen Zustand als Sicherung zum Zurücksetzen speichern | `bs.plot.snapshot` |
-| `/plot tp <ID> [World]`, `/plot teleport …` | Zu einem Grundstück teleportieren – möglichst mittig (Abstand zum Rand, nahe dem Flächenschwerpunkt) und nie auf Lava, Feuer o.Ä. (nur im Spiel) | `bs.plot.tp` |
+| `/plot teleport <ID> [World]`, `/plot tp …` | Zu einem Grundstück teleportieren – möglichst mittig (Abstand zum Rand, nahe dem Flächenschwerpunkt) und nie auf Lava, Feuer o.Ä. (nur im Spiel) | `bs.plot.tp` |
 | `/plot list <Name>` | Grundstücke einer anderen Person | `bs.plot.list.others` |
 | `/plot price <ID> <Betrag\|none> [World]` | Eigener Preis eines Grundstücks, geht vor dem Preis der Stadt; `none` = wieder Stadt- bzw. Standardpreis | `bs.plot.price` |
 | `/plot plots [all\|free\|taken] [World\|*] [Seite]` | Alle Grundstücke einer Welt oder aller Welten (`*`, Standard) mit Status, Besitzenden und Größe; 10 pro Seite, « zurück / weiter » sind anklickbar; ein Klick auf eine Zeile schreibt `/plot tp <ID> <World>` in den Chat | `bs.plot.list.all` |
@@ -228,6 +256,7 @@ anderen über LuckPerms, z.B. `lp group team permission set bs.plot.assign true`
 | `bs.plot.trust` | alle | Rollen auf eigenen Grundstücken vergeben |
 | `bs.plot.free` | alle | `/plot free [World\|*] [Seite]` und `/city free` – Liste der freien Grundstücke |
 | `bs.city` | alle | `/city`, `/city list`, `/city info` |
+| `bs.city.tp` | alle | `/city teleport` |
 | alle übrigen `bs.*` | Op | siehe Team-Befehle |
 
 `/blockstead` (Version, Lizenz, Quellcode) braucht kein Recht.

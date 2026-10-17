@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.github.chrisswalters'
-version = '2.3.0'
+version = '2.4.0'
 
 // Paper version the plugin is compiled against and that `./gradlew runServer` starts
 def mcVersion = '26.3'

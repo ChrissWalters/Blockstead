@@ -49,6 +49,7 @@ Hilfe und Meldungen kommen in deiner Sprache.
 | `/city list` | Alle Städte, mit Anzahl der Grundstücke, freien Grundstücken und Preis |
 | `/city info [City]` | Infos zu einer Stadt (ohne Name: die Stadt, in der du bist) |
 | `/city free <City>` | Freie Grundstücke einer Stadt |
+| `/city teleport <City>`, `/city tp …` | In eine Stadt teleportieren |
 | `/blockstead` | Version, Lizenz und Quellcode des Plugins |
 
 Was davon du nutzen darfst, legt der Server fest – Befehle ohne Berechtigung werden dir gar nicht erst

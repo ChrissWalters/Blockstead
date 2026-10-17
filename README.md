@@ -46,6 +46,7 @@ All commands have tab completion.
 | `/city list` | All cities, with number of plots, free plots and price |
 | `/city info [City]` | Information about a city (without a name: the city you are in) |
 | `/city free <City>` | Free plots of a city |
+| `/city teleport <City>`, `/city tp …` | Teleport to a city |
 | `/blockstead` | Version, licence and source code of the plugin |
 
 What you may use is decided by the server – commands you have no permission for aren't shown at all.

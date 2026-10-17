@@ -56,8 +56,11 @@ permissions:
   bs.city:
     description: "able to use /city, /city list and /city info"
     default: true
+  bs.city.tp:
+    description: "able to teleport to a city with /city tp"
+    default: true
   bs.city.manage:
-    description: "able to create, redefine and remove cities and set their price, greeting and farewell"
+    description: "able to create, redefine and remove cities and set their landing point, price, greeting and farewell"
     default: op
   bs.city.trust:
     description: "able to decide who may build in a city with /city trust and /city untrust"

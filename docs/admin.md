@@ -39,6 +39,13 @@ come from EssentialsX (or another plugin).
 3. Read the notes for the version in [CHANGELOG.md](../CHANGELOG.md) – especially new `config.yml` entries,
    which are not added automatically.
 
+### From 2.2.x/2.3.x to 2.4.0
+
+* New are `/city teleport` (permission `bs.city.tp`, everyone – add it if players get their permissions explicitly in
+  LuckPerms), `/city setspawn` and optional heights (`bottom`, `top` or `selection`) for `/plot create`,
+  `/city create` and `/city redefine`. `/plot home` now also has the one-second waiting time.
+  Existing plots and cities are unchanged.
+
 ### From 2.2.x to 2.3.0
 
 * **Cities** are new (see [Cities](#cities)). Existing plots and WorldGuard regions stay unchanged. To turn a
@@ -97,10 +104,21 @@ same; details in the [CHANGELOG](../CHANGELOG.md).
 
 Plots are WorldGuard regions with the ID `plot_<number>`:
 
-1. Select an area with WorldEdit – a cuboid (`//wand`, two points) or a polygon (`//sel poly`). The height
-   doesn't matter: plots always reach from the lowest to the highest point of the world.
+1. Select an area with WorldEdit – a cuboid (`//wand`, two points) or a polygon (`//sel poly`). The height of
+   the selection doesn't matter.
 2. `/plot create` – creates the plot with the default flags from `config.yml` and saves its state (for
-   restoring it later).
+   restoring it later). Without further details, the plot reaches from the lowest to the highest point of the
+   world.
+
+**Height limits (optional):** `/plot create bottom <Y>`, `/plot create top <Y>` or both, in any order (e.g.
+`/plot create bottom 60 top 70`; both values are included) – or `/plot create selection`: exactly the height
+of your WorldEdit selection, handy for storeys. All heights are absolute Y coordinates (F3 or the message of
+`//pos1` shows them). Relative to the selection: expand it with WorldEdit first, e.g. `//expand 60 up` or
+`//expand 80 down`, then `/plot create selection`. Plots may then lie on top of each other – e.g.
+flats in a house – as long as they don't overlap. Above and below such a plot its rules don't apply; inside a
+city the city protects that space, outside of cities nothing does (`/plot create` warns). `/plot info` shows
+the height only when it is limited; `/plot tp` lands inside the height (on the floor of a storey, not on the
+roof).
 
 New plots have no owners. Players buy them with `/plot claim`, staff give them out with `/plot assign`. When
 entering, the translated default message is shown; you set a custom text with the WorldGuard flag
@@ -123,15 +141,23 @@ entering, the translated default message is shown; you set a custom text with th
 ## Cities
 
 A city is a WorldGuard region managed by Blockstead (`city_<name>`), from the lowest to the highest point of
-the world. It protects everything the city itself owns:
+the world – or, with `bottom <Y>` / `top <Y>` as for plots, between fixed heights (e.g. a city underground).
+It protects everything the city itself owns:
 
 * **Outside of plots** only the people added with `/city trust` may build – streets, squares and the city's
   buildings can't be griefed. Staff with WorldGuard bypass (`/rg bypass`) can always build.
 * **On plots** only the plot counts (plots have a higher priority, `plots.priority` > `cities.priority`):
   owners and roles work as before, city builders have no rights there.
-* A plot **belongs to a city** if it shares at least one block column with it – also if it reaches beyond
-  the city's border. If it touches several cities, the one with the largest shared area counts (`/plot create`
-  points that out). Cities must not overlap each other. Plots outside of cities work as before.
+* A plot **belongs to a city** if it shares at least one block with it – also if it reaches beyond the city's
+  border. If it touches several cities, the one with the largest shared space counts (`/plot create` points
+  that out). Cities must not overlap each other (on top of each other is fine). Plots outside of cities work
+  as before.
+* **Teleport:** `/city teleport <City>` (short `/city tp`) takes everyone to the city's landing point. Staff
+  set it with `/city setspawn <City>` at their own position (including the viewing direction; it must be
+  inside the city – `/city create` reminds you). Without a landing point, Blockstead looks for a safe spot as
+  central as possible, preferably not on a plot. Between two teleports of a person (`/city teleport` and
+  `/plot home`) there is at least one second (staff exempt). The landing point is WorldGuard's `teleport`
+  flag, so `/rg teleport city_<name>` lands there, too.
 * **Price** of a plot: its own price (`/plot price`) > the price of its city (`/city price`) > `plots.price`.
   Refunds are always the amount that was actually paid.
 * **Greeting and farewell:** when entering or leaving, everyone sees a translated default text ("Welcome to
@@ -144,16 +170,19 @@ the world. It protects everything the city itself owns:
 | `/city list` | All cities with plots, free plots and price | `bs.city` |
 | `/city info [City]` | Plots, price; for staff also builders, greeting and farewell | `bs.city` |
 | `/city free <City> [page]` | Free plots of the city | `bs.plot.free` |
+| `/city teleport <City>`, `/city tp …` | Teleport to the city (in the game only) | `bs.city.tp` |
 | `/city plots <City> [all\|free\|taken] [page]` | All plots of the city, like `/plot plots` | `bs.plot.list.all` |
-| `/city create <Name>` | Create a city from the WorldEdit selection (in the game only); name: letters, digits, `-`, `_`, unique on the server | `bs.city.manage` |
-| `/city redefine <City>` | Replace the area with the WorldEdit selection; everything else stays (in the game only) | `bs.city.manage` |
+| `/city create <Name> [bottom <Y>] [top <Y>\|selection]` | Create a city from the WorldEdit selection (in the game only); name: letters, digits, `-`, `_`, unique on the server | `bs.city.manage` |
+| `/city redefine <City> [bottom <Y>] [top <Y>\|selection]` | Replace the area with the WorldEdit selection; everything else stays (in the game only; a landing point outside the new area is removed) | `bs.city.manage` |
+| `/city setspawn <City> [none]` | Landing point for `/city teleport` at your position (in the game only); `none` removes it | `bs.city.manage` |
 | `/city remove <City>` | Delete the city (asks for confirmation); its plots stay | `bs.city.manage` |
 | `/city price <City> <amount\|none>` | Price of the plots in the city; `none` = default price | `bs.city.manage` |
 | `/city greeting <City> <text\|default\|off>` | Message when entering | `bs.city.manage` |
 | `/city farewell <City> <text\|default\|off>` | Message when leaving | `bs.city.manage` |
 | `/city trust <City> <Name>`, `/city untrust <City> <Name>` | Who may build in the city outside of plots | `bs.city.trust` |
 
-Everything except `create`, `redefine` and `info` without a name also works from the console.
+Everything except `tp`, `create`, `redefine`, `setspawn` (without `none`) and `info` without a name also works
+from the console.
 
 **Flags of a city apply on its plots, too**, as long as a plot doesn't set the flag itself (WorldGuard takes
 the value of the highest priority that sets it). That's why `cities.default-flags` ignores protection flags
@@ -177,13 +206,13 @@ and **required from the server console**, e.g. `plot assign plot_3 Alex world`.
 
 | Command | Description | Permission |
 |---|---|---|
-| `/plot create` | Create a plot from the WorldEdit selection (in the game only) | `bs.plot.create` |
+| `/plot create [bottom <Y>] [top <Y>\|selection]` | Create a plot from the WorldEdit selection, optionally with height limits or the height of the selection (in the game only) | `bs.plot.create` |
 | `/plot remove <ID> [World] [reset]` | Delete a plot; the price is refunded | `bs.plot.remove` |
 | `/plot assign <ID> <Name> [World]` | Give a free plot to someone at no cost (also to people who are offline) | `bs.plot.assign` |
 | `/plot unassign <ID> [World] [reset]` | Release any plot; the price is refunded | `bs.plot.unassign` |
 | `/plot reset [ID] [World]` | Restore from the snapshot, ownership and roles stay | `bs.plot.reset` |
 | `/plot snapshot <ID> [World]` | Save the current state as the reset snapshot | `bs.plot.snapshot` |
-| `/plot tp <ID> [World]`, `/plot teleport …` | Teleport to a plot – as central as possible (distance to the edge, close to the centroid) and never onto lava, fire or similar (in the game only) | `bs.plot.tp` |
+| `/plot teleport <ID> [World]`, `/plot tp …` | Teleport to a plot – as central as possible (distance to the edge, close to the centroid) and never onto lava, fire or similar (in the game only) | `bs.plot.tp` |
 | `/plot list <Name>` | Plots of another person | `bs.plot.list.others` |
 | `/plot price <ID> <amount\|none> [World]` | Own price of a plot, overrides the price of the city; `none` = city or default price again | `bs.plot.price` |
 | `/plot plots [all\|free\|taken] [World\|*] [page]` | All plots of one world or of all worlds (`*`, default), with status, owners and size; 10 per page, « back / next » are clickable; clicking a line puts `/plot tp <ID> <World>` into the chat | `bs.plot.list.all` |
@@ -219,6 +248,7 @@ else through LuckPerms, e.g. `lp group team permission set bs.plot.assign true`.
 | `bs.plot.trust` | everyone | Giving roles on your own plots |
 | `bs.plot.free` | everyone | `/plot free [World\|*] [page]` and `/city free` – list of free plots |
 | `bs.city` | everyone | `/city`, `/city list`, `/city info` |
+| `bs.city.tp` | everyone | `/city teleport` |
 | all other `bs.*` | Op | see staff commands |
 
 `/blockstead` (version, licence, source code) needs no permission.

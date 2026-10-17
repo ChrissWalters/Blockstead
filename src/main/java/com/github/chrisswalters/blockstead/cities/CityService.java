@@ -6,11 +6,14 @@ import com.github.chrisswalters.blockstead.lang.Messages;
 import com.github.chrisswalters.blockstead.plots.CreatePlot;
 import com.github.chrisswalters.blockstead.plots.Plot;
 import com.github.chrisswalters.blockstead.util.BlocksteadFlags;
+import com.github.chrisswalters.blockstead.util.Landing;
 import com.github.chrisswalters.blockstead.util.PlayerLookup;
 import com.github.chrisswalters.blockstead.util.Selections;
 import com.github.chrisswalters.blockstead.util.WorldGuardUtils;
+import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldguard.protection.flags.Flag;
+import com.sk89q.worldguard.protection.flags.Flags;
 import com.sk89q.worldguard.protection.managers.RegionManager;
 import com.sk89q.worldguard.protection.managers.storage.StorageException;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
@@ -33,13 +36,14 @@ import java.util.regex.Pattern;
 /**
  * Verwaltung von Städten: anlegen, Fläche ändern, löschen, Baurechte, Preis, Begrüßung und Abschied.
  *
- * <p>Eine Stadt ist eine WorldGuard-Region ({@link City}) vom tiefsten bis zum höchsten Punkt der Welt mit einer
+ * <p>Eine Stadt ist eine WorldGuard-Region ({@link City}) mit einer
  * niedrigeren Priorität als Grundstücke ({@code cities.priority}). Daraus folgt der Schutz: In der Stadt bauen
  * nur ihre Mitglieder ({@link #trust}); auf Grundstücken gilt wegen der höheren Priorität allein das Grundstück –
  * Mitglieder der Stadt haben dort keine Rechte, Besitzende bauen ungestört. Städte dürfen sich nicht überlappen.
  *
- * <p>Ein Grundstück gehört zu einer Stadt, wenn es mindestens eine Blockspalte mit ihr teilt; bei mehreren
- * Städten gilt die mit der größten gemeinsamen Fläche ({@link #cityOf}). Das wird immer frisch berechnet, nichts
+ * <p>Ein Grundstück gehört zu einer Stadt, wenn es mindestens einen Block mit ihr teilt; bei mehreren
+ * Städten gilt die mit dem größten gemeinsamen Raum ({@link #cityOf}). Städte und Grundstücke reichen über die
+ * ganze Welthöhe oder zwischen beim Anlegen angegebenen Höhen. Das wird immer frisch berechnet, nichts
  * wird gespeichert – ändert sich die Fläche einer Stadt, ändert sich auch die Zugehörigkeit.
  *
  * <p>Methoden mit {@link CommandSender}-Parameter schicken ihre Rückmeldungen direkt an diesen.
@@ -110,20 +114,40 @@ public class CityService {
         return Optional.empty();
     }
 
-    /** Alle Städte, mit denen das Grundstück mindestens eine Blockspalte teilt. */
+    /** Alle Städte, mit denen das Grundstück mindestens einen Block teilt (WorldGuard prüft auch die Höhe). */
     public List<City> citiesTouching(Plot plot) {
         List<City> candidates = getCities(plot.world());
         List<ProtectedRegion> touching = plot.region().getIntersectingRegions(candidates.stream().map(City::region).toList());
         return candidates.stream().filter(city -> touching.contains(city.region())).toList();
     }
 
-    /** Stadt, zu der das Grundstück gehört; bei mehreren die mit der größten gemeinsamen Fläche. */
+    /** Stadt, zu der das Grundstück gehört; bei mehreren die mit dem größten gemeinsamen Raum. */
     public Optional<City> cityOf(Plot plot) {
         List<City> touching = citiesTouching(plot);
         if (touching.size() <= 1) {
             return touching.stream().findFirst();
         }
-        return touching.stream().max(Comparator.comparingLong(city -> sharedColumns(plot.region(), city.region())));
+        return touching.stream().max(Comparator.comparingLong(city -> sharedBlocks(plot.region(), city.region())));
+    }
+
+    /**
+     * Ziel für {@code /city tp}: der gesetzte Landepunkt ({@link #setSpawn}), sonst ein sicherer Punkt möglichst
+     * mittig in der Stadt – nach Möglichkeit nicht auf einem Grundstück.
+     *
+     * @return leer, wenn es keinen sicheren Punkt gibt
+     */
+    public Optional<Location> getTeleportLocation(City city) {
+        com.sk89q.worldedit.util.Location spawn = city.region().getFlag(Flags.TELE_LOC);
+        if (spawn != null) {
+            return Optional.of(new Location(city.world(), spawn.getX(), spawn.getY(), spawn.getZ(), spawn.getYaw(), spawn.getPitch()));
+        }
+        Optional<Location> outsidePlots = Landing.find(city.world(), city.region(), location -> !isOnPlot(location));
+        return outsidePlots.isPresent() ? outsidePlots : Landing.find(city.world(), city.region(), location -> true);
+    }
+
+    /** Ob die Stadt einen gesetzten Landepunkt hat. */
+    public boolean hasSpawn(City city) {
+        return city.region().getFlag(Flags.TELE_LOC) != null;
     }
 
     /** Alle Grundstücke aus {@code plots} (z.B. alle der Welt), die zu der Stadt gehören. */
@@ -136,8 +160,11 @@ public class CityService {
 
     // ---------------------------------------------------------------- Ändern
 
-    /** Legt eine Stadt aus der WorldEdit-Auswahl der Person an (Flags und Priorität aus der config.yml). */
-    public boolean create(Player player, String name) {
+    /**
+     * Legt eine Stadt aus der WorldEdit-Auswahl der Person an (Flags und Priorität aus der config.yml), optional mit
+     * Höhengrenzen.
+     */
+    public boolean create(Player player, String name, Selections.Heights heights) {
         if (!NAME.matcher(name).matches()) {
             Messages.send(player, "city.invalid-name", Messages.arg("name", name));
             return false;
@@ -147,7 +174,7 @@ public class CityService {
             return false;
         }
         Selections.Shape shape = Selections.read(player);
-        if (shape == null) {
+        if (shape == null || !shape.checkHeights(player, heights)) {
             return false;
         }
         RegionManager manager = WorldGuardUtils.getRegionManager(shape.world());
@@ -155,7 +182,7 @@ public class CityService {
             Messages.send(player, "plot.no-regions");
             return false;
         }
-        ProtectedRegion region = shape.toRegion(City.PREFIX + name.toLowerCase());
+        ProtectedRegion region = shape.toRegion(City.PREFIX + name.toLowerCase(), heights);
         if (overlapsOtherCity(player, region, shape.world())) {
             return false;
         }
@@ -169,17 +196,19 @@ public class CityService {
 
         City city = new City(shape.world(), region);
         Messages.send(player, "city.created", Messages.arg("city", name), Messages.arg("plots", countPlots(city)));
+        Messages.send(player, "city.created-spawn-hint", Messages.arg("command", "/city setspawn " + name));
         log.info("City " + name + " in world " + shape.world().getName() + " created by " + player.getName());
         return true;
     }
 
     /**
-     * Ersetzt die Fläche der Stadt durch die WorldEdit-Auswahl der Person; Name, Baurechte, Preis, Texte, Flags und
-     * Priorität bleiben. Die Auswahl muss in der Welt der Stadt liegen.
+     * Ersetzt die Fläche der Stadt durch die WorldEdit-Auswahl der Person (Höhe wie bei {@link #create}); Name,
+     * Baurechte, Preis, Texte, Flags und Priorität bleiben. Die Auswahl muss in der Welt der Stadt liegen. Ein
+     * Landepunkt, der danach außerhalb liegt, wird entfernt.
      */
-    public boolean redefine(Player player, City city) {
+    public boolean redefine(Player player, City city, Selections.Heights heights) {
         Selections.Shape shape = Selections.read(player);
-        if (shape == null) {
+        if (shape == null || !shape.checkHeights(player, heights)) {
             return false;
         }
         if (!shape.world().equals(city.world())) {
@@ -191,11 +220,16 @@ public class CityService {
             Messages.send(player, "plot.no-regions");
             return false;
         }
-        ProtectedRegion region = shape.toRegion(city.id());
+        ProtectedRegion region = shape.toRegion(city.id(), heights);
         if (overlapsOtherCity(player, region, city.world())) {
             return false;
         }
         region.copyFrom(city.region());
+        com.sk89q.worldedit.util.Location spawn = region.getFlag(Flags.TELE_LOC);
+        if (spawn != null && !region.contains(spawn.toVector().toBlockPoint())) {
+            region.setFlag(Flags.TELE_LOC, null);
+            Messages.send(player, "city.spawn-removed-outside", Messages.arg("city", city.name()));
+        }
         manager.addRegion(region); // ersetzt die Region mit derselben ID
         saveRegions(city.world());
 
@@ -216,6 +250,34 @@ public class CityService {
         saveRegions(city.world());
         Messages.send(sender, "city.removed", Messages.arg("city", city.name()));
         log.info(sender.getName() + " deleted city " + city.name() + " in " + city.world().getName());
+        return true;
+    }
+
+    /**
+     * Setzt den Landepunkt für {@code /city tp} auf die Position der Person (mit Blickrichtung); sie muss in der Stadt
+     * stehen. Gespeichert in WorldGuards Flag {@code teleport} – {@code /rg teleport city_<name>} landet also dort
+     * auch.
+     */
+    public boolean setSpawn(Player player, City city) {
+        Location location = player.getLocation();
+        if (!location.getWorld().equals(city.world()) || !city.region().contains(BukkitAdapter.asBlockVector(location))) {
+            Messages.send(player, "city.spawn-outside", Messages.arg("city", city.name()));
+            return false;
+        }
+        city.region().setFlag(Flags.TELE_LOC, BukkitAdapter.adapt(location));
+        saveRegions(city.world());
+        Messages.send(player, "city.spawn-set", Messages.arg("city", city.name()));
+        log.info(player.getName() + " set the spawn of city " + city.name() + " to " + location.getBlockX() + " "
+                + location.getBlockY() + " " + location.getBlockZ());
+        return true;
+    }
+
+    /** Entfernt den Landepunkt; {@code /city tp} sucht dann selbst einen sicheren Punkt. */
+    public boolean clearSpawn(CommandSender sender, City city) {
+        city.region().setFlag(Flags.TELE_LOC, null);
+        saveRegions(city.world());
+        Messages.send(sender, "city.spawn-cleared", Messages.arg("city", city.name()));
+        log.info(sender.getName() + " removed the spawn of city " + city.name());
         return true;
     }
 
@@ -313,11 +375,18 @@ public class CityService {
         return plotsIn(city, plots).size();
     }
 
-    /** Anzahl der Blockspalten, die beide Regionen enthalten (nur im gemeinsamen umgebenden Rechteck gezählt). */
-    private static long sharedColumns(ProtectedRegion a, ProtectedRegion b) {
+    /**
+     * Anzahl der Blöcke, die beide Regionen enthalten. Beide sind senkrechte Prismen (Fläche × Höhe), also
+     * gemeinsame Blockspalten (nur im gemeinsamen umgebenden Rechteck gezählt) × gemeinsame Höhe.
+     */
+    private static long sharedBlocks(ProtectedRegion a, ProtectedRegion b) {
         BlockVector3 aMin = a.getMinimumPoint(), aMax = a.getMaximumPoint();
         BlockVector3 bMin = b.getMinimumPoint(), bMax = b.getMaximumPoint();
         int y = Math.max(aMin.y(), bMin.y());
+        int height = Math.min(aMax.y(), bMax.y()) - y + 1;
+        if (height <= 0) {
+            return 0;
+        }
         long count = 0;
         for (int x = Math.max(aMin.x(), bMin.x()); x <= Math.min(aMax.x(), bMax.x()); x++) {
             for (int z = Math.max(aMin.z(), bMin.z()); z <= Math.min(aMax.z(), bMax.z()); z++) {
@@ -326,7 +395,12 @@ public class CityService {
                 }
             }
         }
-        return count;
+        return count * height;
+    }
+
+    /** Ob an der Position ein Grundstück ist. */
+    private static boolean isOnPlot(Location location) {
+        return WorldGuardUtils.getRegionsAtLocation(location).stream().anyMatch(id -> id.startsWith(CreatePlot.PLOT_PREFIX));
     }
 
     /** Meldet, wenn die Flag nicht registriert werden konnte (anderes Plugin belegt den Namen, siehe Log). */

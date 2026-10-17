@@ -39,7 +39,7 @@ purpose.
 | Database | Prepared SQL statements only |
 | Currency | Payment before the plot is given out; bookings through the economy plugin, failed refunds in the log |
 | Files | Names of snapshot files are reduced to safe characters |
-| Server load | Waiting time between two restores by players |
+| Server load | Waiting time between two restores by players; at least one second between two teleports of a person (`/plot home`, `/city teleport`) |
 | Build | The pipeline runs with read permission; only the release job for version tags may write. Pull requests may only change language files |
 | Updates | Backup of database and regions at every start; no start with a newer database |
 | Privacy | No telemetry, no outgoing connections |
