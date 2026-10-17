@@ -1,5 +1,7 @@
 package com.github.chrisswalters.blockstead.plots;
 
+import com.github.chrisswalters.blockstead.cities.City;
+import com.github.chrisswalters.blockstead.cities.CityService;
 import com.github.chrisswalters.blockstead.config.PluginConfig;
 import com.github.chrisswalters.blockstead.economy.EconomyService;
 import com.github.chrisswalters.blockstead.economy.Transaction;
@@ -9,6 +11,7 @@ import com.github.chrisswalters.blockstead.roles.PlotRole;
 import com.github.chrisswalters.blockstead.roles.RoleService;
 import com.github.chrisswalters.blockstead.storage.DataException;
 import com.github.chrisswalters.blockstead.storage.Database;
+import com.github.chrisswalters.blockstead.util.BlocksteadFlags;
 import com.github.chrisswalters.blockstead.util.PlayerLookup;
 import com.github.chrisswalters.blockstead.util.WorldGuardUtils;
 import com.sk89q.worldedit.WorldEditException;
@@ -36,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -61,16 +65,25 @@ public class PlotService {
     private final HomeService homes;
     private final RoleService roles;
     private final SnapshotService snapshots;
+    private final CityService cities;
     private final PluginConfig config;
     private final Logger log;
 
+    /** Woher der Preis eines Grundstücks kommt (Reihenfolge: eigener Preis vor Stadt vor Standard). */
+    public enum PriceSource { PLOT, CITY, DEFAULT }
+
+    /** Preis, der beim Kauf eines Grundstücks gilt, und woher er kommt. */
+    public record Price(long amount, PriceSource source) {
+    }
+
     public PlotService(Database database, EconomyService economy, HomeService homes, RoleService roles,
-                       SnapshotService snapshots, PluginConfig config, Logger log) {
+                       SnapshotService snapshots, CityService cities, PluginConfig config, Logger log) {
         this.database = database;
         this.economy = economy;
         this.homes = homes;
         this.roles = roles;
         this.snapshots = snapshots;
+        this.cities = cities;
         this.config = config;
         this.log = log;
     }
@@ -140,6 +153,22 @@ public class PlotService {
         return plot.region().getMembers().contains(uuid) && roles.memberHasRight(plot, uuid, right);
     }
 
+    /**
+     * Preis für {@code /plot claim}: der eigene Preis des Grundstücks ({@code /plot price}), sonst der Preis seiner
+     * Stadt ({@code /city price}), sonst {@code plots.price} aus der config.yml.
+     */
+    public Price priceOf(Plot plot) {
+        Integer own = BlocksteadFlags.PRICE == null ? null : plot.region().getFlag(BlocksteadFlags.PRICE);
+        if (own != null) {
+            return new Price(own, PriceSource.PLOT);
+        }
+        OptionalLong cityPrice = cities.cityOf(plot).map(City::price).orElse(OptionalLong.empty());
+        if (cityPrice.isPresent()) {
+            return new Price(cityPrice.getAsLong(), PriceSource.CITY);
+        }
+        return new Price(config.getPlotPrice(), PriceSource.DEFAULT);
+    }
+
     /** Rolle der Person als Anzeigename für den Empfänger, z.B. "Besitzende" bzw. "Owner"; {@code null} ohne Rolle. */
     public Component describeRole(Plot plot, UUID uuid, CommandSender recipient) {
         if (plot.isOwner(uuid)) {
@@ -151,7 +180,7 @@ public class PlotService {
     // ---------------------------------------------------------------- Ändern
 
     /**
-     * Kauft ein freies Grundstück zum Preis aus der config.yml ({@code plots.price}) über das Economy-Plugin.
+     * Kauft ein freies Grundstück zu seinem Preis ({@link #priceOf}) über das Economy-Plugin.
      * Reihenfolge: Economy-Plugin erreichbar? → genug Guthaben? → abbuchen → erst dann Besitz vergeben.
      * Bei Preis 0 geht der Kauf auch ohne Economy-Plugin.
      */
@@ -160,7 +189,7 @@ public class PlotService {
             Messages.send(player, "claim.taken", Messages.arg("id", plot.id()));
             return false;
         }
-        long price = config.getPlotPrice();
+        long price = priceOf(plot).amount();
         if (price > 0) {
             if (!economy.isAvailable()) {
                 Messages.send(player, "claim.economy-unavailable");
@@ -320,6 +349,29 @@ public class PlotService {
             Messages.send(online, "untrust.received", Messages.arg("id", plot.id()));
         }
         log.info(sender.getName() + ": removed role of " + name + " on " + plot.id() + " in " + plot.world().getName());
+        return true;
+    }
+
+    /**
+     * Setzt den eigenen Preis des Grundstücks (geht vor dem Preis der Stadt und dem Standardpreis);
+     * {@code null} entfernt ihn wieder. Ein schon bezahlter Kauf bleibt unberührt – erstattet wird immer der
+     * tatsächlich bezahlte Betrag.
+     */
+    public boolean setPrice(CommandSender sender, Plot plot, Integer price) {
+        if (BlocksteadFlags.PRICE == null) {
+            Messages.send(sender, "error.flag-unavailable");
+            return false;
+        }
+        plot.region().setFlag(BlocksteadFlags.PRICE, price);
+        saveRegions(plot.world());
+        if (price == null) {
+            Messages.send(sender, "price.cleared", Messages.arg("id", plot.id()),
+                    Messages.arg("price", economy.format(priceOf(plot).amount())));
+        } else {
+            Messages.send(sender, "price.set", Messages.arg("id", plot.id()), Messages.arg("price", economy.format(price)));
+        }
+        log.info(sender.getName() + ": price of " + plot.id() + " in " + plot.world().getName() + " -> "
+                + (price == null ? "city/default" : price));
         return true;
     }
 

@@ -3,31 +3,23 @@ package com.github.chrisswalters.blockstead.plots;
 import com.github.chrisswalters.blockstead.Blockstead;
 import com.github.chrisswalters.blockstead.config.PluginConfig;
 import com.github.chrisswalters.blockstead.lang.Messages;
-import com.sk89q.worldedit.IncompleteRegionException;
-import com.sk89q.worldedit.LocalSession;
-import com.sk89q.worldedit.WorldEdit;
-import com.sk89q.worldedit.bukkit.BukkitAdapter;
-import com.sk89q.worldedit.math.BlockVector3;
-import com.sk89q.worldedit.regions.CuboidRegion;
-import com.sk89q.worldedit.regions.Polygonal2DRegion;
-import com.sk89q.worldedit.regions.Region;
+import com.github.chrisswalters.blockstead.cities.City;
+import com.github.chrisswalters.blockstead.util.Selections;
 import com.sk89q.worldedit.world.World;
 import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.protection.managers.RegionManager;
-import com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion;
-import com.sk89q.worldguard.protection.regions.ProtectedPolygonalRegion;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import org.bukkit.entity.Player;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Legt Grundstücke (Plots) als WorldGuard-Regionen aus einer WorldEdit-Auswahl an.
  *
  * <p>Ein Plot reicht immer vom tiefsten bis zum höchsten Punkt der Welt, unabhängig von der Höhe
- * der Auswahl. Unterstützt werden Quader-Auswahlen ({@code //sel cuboid}) und Polygon-Auswahlen
- * ({@code //sel poly}). Überlappungen mit anderen Grundstücken werden abgelehnt, bei anderen Regionen mit zu
+ * der Auswahl ({@link Selections}). Überlappungen mit anderen Grundstücken werden abgelehnt, bei anderen Regionen mit zu
  * hoher Priorität gibt es eine Warnung ({@link PlotOverlaps}). Neue Plots haben noch keine Besitzenden und Mitglieder. Direkt nach dem Anlegen
  * wird der Zustand gesichert ({@link SnapshotService}), damit das Grundstück später zurückgesetzt werden kann.
  */
@@ -44,19 +36,11 @@ public class CreatePlot {
      * @return {@code true}, wenn der Plot angelegt wurde
      */
     public static boolean createPlot(Player player) {
-        LocalSession session = WorldEdit.getInstance().getSessionManager().get(BukkitAdapter.adapt(player));
-        // Die Auswahl kann in einer anderen Welt liegen als die Person gerade ist
-        World selectionWorld = session.getSelectionWorld();
-
-        Region selection;
-        try {
-            if (selectionWorld == null) throw new IncompleteRegionException();
-            selection = session.getSelection(selectionWorld);
-        } catch (IncompleteRegionException e) {
-            Messages.send(player, "create.no-selection");
+        Selections.Shape shape = Selections.read(player);
+        if (shape == null) {
             return false;
         }
-
+        World selectionWorld = shape.weWorld();
         RegionManager regionManager = WorldGuard.getInstance().getPlatform().getRegionContainer().get(selectionWorld);
         if (regionManager == null) {
             Messages.send(player, "plot.no-regions");
@@ -64,21 +48,7 @@ public class CreatePlot {
         }
 
         String plotId = nextFreePlotId(regionManager);
-        int minY = selectionWorld.getMinY();
-        int maxY = selectionWorld.getMaxY();
-
-        // Die Auswahl selbst wird nicht verändert, sonst hätte die Person danach eine Auswahl über die ganze Welthöhe
-        ProtectedRegion plot;
-        if (selection instanceof Polygonal2DRegion polygon) {
-            plot = new ProtectedPolygonalRegion(plotId, polygon.getPoints(), minY, maxY);
-        } else if (selection instanceof CuboidRegion cuboid) {
-            BlockVector3 min = cuboid.getMinimumPoint().withY(minY);
-            BlockVector3 max = cuboid.getMaximumPoint().withY(maxY);
-            plot = new ProtectedCuboidRegion(plotId, min, max);
-        } else {
-            Messages.send(player, "create.wrong-shape");
-            return false;
-        }
+        ProtectedRegion plot = shape.toRegion(plotId);
 
         // Grundstücke dürfen sich nicht überlappen (siehe PlotOverlaps)
         List<ProtectedRegion> overlapping = PlotOverlaps.overlappingPlots(plot, regionManager);
@@ -99,8 +69,18 @@ public class CreatePlot {
             Messages.send(player, "create.priority-warning", Messages.arg("regions", PlotOverlaps.describe(conflicting, true)),
                     Messages.arg("priority", config.getPlotPriority()));
         }
+        // Zu welcher Stadt das Grundstück gehört – bei mehreren gilt die mit der größten gemeinsamen Fläche
+        Plot created = new Plot(shape.world(), plot);
+        List<City> cities = Blockstead.getCities().citiesTouching(created);
+        if (cities.size() == 1) {
+            Messages.send(player, "create.in-city", Messages.arg("city", cities.getFirst().name()));
+        } else if (cities.size() > 1) {
+            Messages.send(player, "create.several-cities", Messages.arg("cities",
+                            cities.stream().map(City::name).collect(Collectors.joining(", "))),
+                    Messages.arg("city", Blockstead.getCities().cityOf(created).map(City::name).orElse("?")));
+        }
         // Zustand beim Anlegen sichern, damit das Grundstück beim Freigeben zurückgesetzt werden kann
-        Blockstead.getPlotService().saveSnapshot(player, new Plot(BukkitAdapter.adapt(selectionWorld), plot));
+        Blockstead.getPlotService().saveSnapshot(player, created);
         Blockstead.getInstance().getLogger().info("Plot " + plotId + " in world " + selectionWorld.getName()
                 + " created by " + player.getName());
         return true;

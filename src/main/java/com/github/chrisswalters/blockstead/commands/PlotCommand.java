@@ -11,6 +11,7 @@ import com.github.chrisswalters.blockstead.plots.PlotService;
 import com.github.chrisswalters.blockstead.roles.PlotRight;
 import com.github.chrisswalters.blockstead.util.PlayerLookup;
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
@@ -53,6 +54,7 @@ import java.util.stream.Collectors;
  *     <li>{@code /plot claim [ID]} – freies Grundstück kaufen ({@code bs.plot.claim})</li>
  *     <li>{@code /plot unclaim [ID] [reset]} – eigenes Grundstück freigeben, mit Erstattung ({@code bs.plot.unclaim})</li>
  *     <li>{@code /plot list} – eigene Grundstücke</li>
+ *     <li>{@code /plot free [World|*] [Seite]} – freie Grundstücke ({@code bs.plot.free})</li>
  *     <li>{@code /plot home} – zum eigenen Home teleportieren ({@code bs.plot.home})</li>
  *     <li>{@code /plot home set} – Home an der aktuellen Position setzen; nur auf Grundstücken, die man
  *     besitzt oder auf denen man eine Rolle mit Home-Recht hat ({@code bs.plot.home})</li>
@@ -70,11 +72,14 @@ import java.util.stream.Collectors;
  *     <li>{@code /plot reset [ID] [World]} – auf die Sicherung zurücksetzen, Besitz und Rollen bleiben ({@code bs.plot.reset})</li>
  *     <li>{@code /plot snapshot <ID> [World]} – aktuellen Zustand als Sicherung zum Zurücksetzen speichern ({@code bs.plot.snapshot})</li>
  *     <li>{@code /plot tp <ID> [World]} (Alias {@code teleport}) – zu einem Grundstück teleportieren ({@code bs.plot.tp})</li>
+ *     <li>{@code /plot plots [all|free|taken] [World|*] [Seite]} – alle Grundstücke auflisten ({@code bs.plot.list.all})</li>
+ *     <li>{@code /plot price <ID> <Betrag|none> [World]} – eigener Preis des Grundstücks, geht vor dem Preis der Stadt
+ *     ({@code bs.plot.price})</li>
  * </ul>
  * {@code reset} setzt den Inhalt auf die Sicherung vom Anlegen zurück (mit Sicherheitsabfrage), sonst
  * bleibt alles Gebaute stehen. Ohne {@code [ID]} gilt das Grundstück, auf dem die ausführende Person
  * steht. {@code [World]} ist im Spiel optional (Standard: eigene Welt) und aus der Konsole Pflicht.
- * Aus der Konsole gehen info, trust, untrust, remove, assign, unassign, reset, snapshot und list &lt;Name&gt;;
+ * Aus der Konsole gehen info, trust, untrust, remove, assign, unassign, reset, snapshot, price, plots, free und list &lt;Name&gt;;
  * Befehle für die eigene Person (claim, unclaim, home, tp, create) nur im Spiel.
  *
  * <p>Gebaut mit dem Brigadier-Befehlssystem von Paper: Der Befehl wird als Baum beschrieben,
@@ -167,6 +172,18 @@ public final class PlotCommand {
                         .executes(context -> reset(context, null, null))
                         .then(idWithWorld((player, plot) -> true, false,
                                 (context, world, reset) -> reset(context, idArgument(context), world))))
+                .then(Commands.literal("price")
+                        .requires(source -> source.getSender().hasPermission("bs.plot.price"))
+                        .then(plotIdArgument((player, plot) -> true)
+                                .then(Commands.literal("none")
+                                        .executes(context -> price(context, null, null))
+                                        .then(worldArgument()
+                                                .executes(context -> price(context, null, worldArgument(context)))))
+                                .then(Commands.argument("price", IntegerArgumentType.integer(0))
+                                        .executes(context -> price(context, IntegerArgumentType.getInteger(context, "price"), null))
+                                        .then(worldArgument()
+                                                .executes(context -> price(context, IntegerArgumentType.getInteger(context, "price"),
+                                                        worldArgument(context)))))))
                 .then(Commands.literal("snapshot")
                         .requires(source -> source.getSender().hasPermission("bs.plot.snapshot"))
                         .then(idWithWorld((player, plot) -> true, false,
@@ -186,7 +203,7 @@ public final class PlotCommand {
         Messages.send(sender, "help.header");
         helpLine(sender, "help.info", "/plot info ");
         if (sender.hasPermission("bs.plot.claim")) {
-            helpLine(sender, "help.claim", "/plot claim ", Messages.arg("price", economy().format(config().getPlotPrice())));
+            helpLine(sender, "help.claim", "/plot claim ");
         }
         if (sender.hasPermission("bs.plot.unclaim")) {
             helpLine(sender, "help.unclaim", "/plot unclaim ");
@@ -208,7 +225,8 @@ public final class PlotCommand {
                 {"bs.plot.list.all", "help.plots", "/plot plots "},
                 {"bs.plot.create", "help.create", "/plot create"}, {"bs.plot.remove", "help.remove", "/plot remove "},
                 {"bs.plot.assign", "help.assign", "/plot assign "}, {"bs.plot.unassign", "help.unassign", "/plot unassign "},
-                {"bs.plot.reset", "help.reset", "/plot reset "}, {"bs.plot.snapshot", "help.snapshot", "/plot snapshot "}};
+                {"bs.plot.reset", "help.reset", "/plot reset "}, {"bs.plot.snapshot", "help.snapshot", "/plot snapshot "},
+                {"bs.plot.price", "help.price", "/plot price "}};
         for (String[] line : staffLines) {
             if (sender.hasPermission(line[0])) {
                 helpLine(sender, line[1], line[2]);
@@ -232,9 +250,11 @@ public final class PlotCommand {
             if (plot == null) return false;
 
             Messages.send(sender, "info.header", Messages.arg("id", plot.id()), Messages.arg("world", plot.world().getName()));
+            Blockstead.getCities().cityOf(plot).ifPresent(city -> Messages.send(sender, "info.city", Messages.arg("city", city.name())));
+            PlotService.Price price = plots().priceOf(plot);
             if (plot.isFree()) {
                 Messages.send(sender, "info.free", Messages.arg("id", plot.id()),
-                        Messages.arg("price", economy().format(config().getPlotPrice())));
+                        Messages.arg("price", economy().format(price.amount())));
             } else {
                 Messages.send(sender, "info.owners", Messages.arg("names", names(plot.ownerIds().stream().toList())));
                 for (UUID member : plot.memberIds()) {
@@ -247,6 +267,10 @@ public final class PlotCommand {
                         Messages.send(sender, "info.own-role", Messages.arg("role", ownRole));
                     }
                 }
+            }
+            if (sender.hasPermission("bs.plot.price")) {
+                Messages.send(sender, "info.price-" + price.source().name().toLowerCase(),
+                        Messages.arg("price", economy().format(price.amount())));
             }
             if (sender.hasPermission("bs.plot.snapshot")) {
                 Messages.send(sender, plots().hasSnapshot(plot) ? "info.snapshot-yes" : "info.snapshot-no");
@@ -430,6 +454,15 @@ public final class PlotCommand {
             if (plot == null) return false;
             if (!confirmReset(sender, "reset", plot)) return false;
             return plots().reset(sender, plot);
+        });
+    }
+
+    /** {@code price}: eigener Preis des Grundstücks; {@code null} = entfernen (dann gilt Stadt- bzw. Standardpreis). */
+    private static int price(CommandContext<CommandSourceStack> context, Integer price, World world) {
+        CommandSender sender = context.getSource().getSender();
+        return CommandSupport.run(sender, () -> {
+            Plot plot = findPlot(sender, idArgument(context), world);
+            return plot != null && plots().setPrice(sender, plot, price);
         });
     }
 

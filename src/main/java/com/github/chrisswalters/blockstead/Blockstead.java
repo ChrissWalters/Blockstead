@@ -1,6 +1,8 @@
 package com.github.chrisswalters.blockstead;
 
+import com.github.chrisswalters.blockstead.cities.CityService;
 import com.github.chrisswalters.blockstead.commands.AnnounceCommand;
+import com.github.chrisswalters.blockstead.commands.CityCommand;
 import com.github.chrisswalters.blockstead.commands.InfoCommand;
 import com.github.chrisswalters.blockstead.commands.PlotCommand;
 import com.github.chrisswalters.blockstead.config.PluginConfig;
@@ -20,13 +22,10 @@ import com.github.chrisswalters.blockstead.roles.RoleService;
 import com.github.chrisswalters.blockstead.storage.Backups;
 import com.github.chrisswalters.blockstead.storage.DataException;
 import com.github.chrisswalters.blockstead.storage.Database;
+import com.github.chrisswalters.blockstead.util.BlocksteadFlags;
 import com.sk89q.worldedit.bukkit.WorldEditPlugin;
-import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
-import com.sk89q.worldguard.protection.flags.Flag;
 import com.sk89q.worldguard.protection.flags.StringFlag;
-import com.sk89q.worldguard.protection.flags.registry.FlagConflictException;
-import com.sk89q.worldguard.protection.flags.registry.FlagRegistry;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.entity.Player;
@@ -42,7 +41,7 @@ import java.util.logging.Level;
  *
  * <p>Ablauf beim Serverstart:
  * <ol>
- *     <li>{@link #onLoad()}: eigene WorldGuard-Flags registrieren. Das muss passieren,
+ *     <li>{@link #onLoad()}: eigene WorldGuard-Flags registrieren ({@link BlocksteadFlags}). Das muss passieren,
  *     bevor WorldGuard aktiviert wird, deshalb nicht erst in {@link #onEnable()}.</li>
  *     <li>{@link #onEnable()}: Abhängigkeiten (WorldEdit, WorldGuard; LuckPerms optional) holen und prüfen,
  *     config.yml laden, Sicherung anlegen, Datenbank öffnen (inkl. Migrationen), einmalige Korrekturen
@@ -63,6 +62,7 @@ public final class Blockstead extends JavaPlugin {
     private static EconomyService economy;
     private static HomeService homes;
     private static PlotService plotService;
+    private static CityService cities;
 
     /**
      * WorldGuard-Flag {@code region-name}: Text, der beim Betreten einer Region angezeigt wird.
@@ -73,22 +73,9 @@ public final class Blockstead extends JavaPlugin {
 
     @Override
     public void onLoad() {
-        FlagRegistry registry = WorldGuard.getInstance().getFlagRegistry();
-        try {
-            StringFlag flag = new StringFlag("region-name");
-            registry.register(flag);
-            REGIONNAME = flag;
-        } catch (FlagConflictException e) {
-            // Ein anderes Plugin hat bereits eine Flag mit diesem Namen registriert.
-            // Hat sie den passenden Typ, verwenden wir sie mit.
-            Flag<?> existing = registry.get("region-name");
-            if (existing instanceof StringFlag stringFlag) {
-                REGIONNAME = stringFlag;
-            } else {
-                getLogger().severe("WorldGuard flag 'region-name' is already registered by another plugin with a different type. "
-                        + "Custom texts when entering regions are not shown.");
-            }
-        }
+        // Gehört schon ein anderes Plugin "region-name" mit passendem Typ, wird dessen Flag mitbenutzt
+        REGIONNAME = BlocksteadFlags.register(new StringFlag("region-name"), StringFlag.class, getLogger());
+        BlocksteadFlags.registerAll(getLogger());
     }
 
     @Override
@@ -113,11 +100,12 @@ public final class Blockstead extends JavaPlugin {
         }
         economy = new EconomyService();
         homes = new HomeService(database);
+        cities = new CityService(pluginConfig, getLogger());
         plotService = new PlotService(database, economy, homes, new RoleService(database, pluginConfig),
-                new SnapshotService(getDataFolder()), pluginConfig, getLogger());
+                new SnapshotService(getDataFolder()), cities, pluginConfig, getLogger());
         try {
             LegacyFlagFix.runOnce(database, getLogger());
-            ConsistencyCheck.run(database, plotService, pluginConfig.getPlotPriority(), getLogger());
+            ConsistencyCheck.run(database, plotService, cities, pluginConfig.getPlotPriority(), getLogger());
         } catch (DataException e) {
             // Korrektur/Prüfung sind nicht kritisch: loggen und normal weiterstarten
             getLogger().log(Level.SEVERE, e.getMessage(), e);
@@ -133,6 +121,7 @@ public final class Blockstead extends JavaPlugin {
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             Commands commands = event.registrar();
             commands.register(PlotCommand.build(), "Plot commands", List.of("p"));
+            commands.register(CityCommand.build(), "City commands");
             commands.register(InfoCommand.build(), "Version, license and source code of Blockstead");
             // Ohne Alias /broadcast – den belegt EssentialsX
             commands.register(AnnounceCommand.build("announce"), "Highlighted server message from the team to everyone");
@@ -204,6 +193,11 @@ public final class Blockstead extends JavaPlugin {
     /** @return Verwaltung bestehender Grundstücke */
     public static PlotService getPlotService() {
         return plotService;
+    }
+
+    /** @return Verwaltung der Städte */
+    public static CityService getCities() {
+        return cities;
     }
 
     /** @return die beim Start eingelesene config.yml */

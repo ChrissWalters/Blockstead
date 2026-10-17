@@ -68,6 +68,7 @@ Pull requests are checked by a separate job: they may only change files in `src/
 ```
 src/main/java/com/github/chrisswalters/blockstead/
 ├── Blockstead.java    Main class: startup, dependencies, registering commands and listeners
+├── cities/            Cities: WorldGuard regions with protection, price, greeting
 ├── commands/          Commands (Paper Brigadier)
 ├── config/            Reading config.yml
 ├── display/           LuckPerms prefixes in chat, tab list and nametag (only loaded with LuckPerms)
@@ -78,7 +79,7 @@ src/main/java/com/github/chrisswalters/blockstead/
 ├── plots/             Creating, buying, assigning, releasing, deleting, restoring plots
 ├── roles/             Roles and rights on plots
 ├── storage/           SQLite database, schema migrations, backups
-└── util/              Helpers (WorldGuard, names, text format, versions)
+└── util/              Helpers (WorldGuard, own flags, selections, names, text format, versions)
 src/main/resources/
 ├── config.yml         Template of the configuration
 ├── lang/              Bundled language files (en.yml, de.yml)

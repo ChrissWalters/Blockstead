@@ -5,13 +5,8 @@ Open points, findings and design decisions from development. Adds the "why" to
 
 ## Open points
 
-* **City areas from Blockstead:** cities should be a concept of Blockstead itself instead of a WorldGuard
-  region maintained by hand – showing the city in `/plot info`, a filter in `/plot list` and prices per city.
-  Plots must keep working without a city, too. Mind the priority rules below (city region lower than plots,
-  not as a parent region).
 * **No reload command:** changes to `config.yml` and the language files need a restart.
-* **Planned versions:** 2.3.0 city areas (in its own branch) – then `/plot plots` and `/plot free` also show
-  the city and get a city filter.
+* **Planned versions:** none at the moment.
 * **Restoring runs synchronously** on the main thread (WorldEdit without asynchronous processing); with very
   large plots the server stalls briefly. The waiting time for `unclaim reset` limits abuse.
 
@@ -42,6 +37,19 @@ Open points, findings and design decisions from development. Adds the "why" to
 * `Material#isInteractable` / `BlockType#isInteractable` are deprecated and inaccurate (e.g. stairs count) –
   use fixed lists instead.
 * Brigadier commands: don't confuse `com.mojang.brigadier.Command` with `org.bukkit.command.Command`.
+* **WorldGuard flags of lower priorities apply where higher ones don't set them:** a flag on a city also
+  applies on every plot inside that doesn't set it. Protection flags on cities are therefore dangerous in both
+  directions (`allow` opens plots to strangers, `deny` locks out owners) – `PluginConfig` skips them in
+  `cities.default-flags` as in `plots.default-flags`.
+* **City data lives in WorldGuard flags** (`blockstead-name`, `blockstead-price`, `blockstead-greeting`,
+  `blockstead-farewell`), not in `data.db`: WorldGuard stays the source of truth and the database format (and
+  thus the way back to an older version) stays unchanged. WorldGuard keeps unknown flags when an older version
+  without them is running.
+* **Which city a plot belongs to is always computed**, never stored: sharing one block column is enough; with
+  several cities the largest shared area wins. Cities must not overlap each other.
+* **Bukkit config defaults:** `getConfigurationSection` / `isConfigurationSection` also see the defaults from the
+  jar's `config.yml` – use `contains(path, true)` to check whether an entry is really in the server's file
+  (used for `cities.default-flags` in configs from before 2.3.0).
 * `StringArgumentType.word()` only accepts letters, digits and `_-.+` – a `*` ("all worlds") must be its own
   literal next to the argument (Brigadier prefers a matching literal).
 * Clickable page links (« back / next ») use `ClickEvent.runCommand` set in code with a fixed own command – the

@@ -35,7 +35,8 @@ import java.util.stream.Collectors;
  *     fügt {@code /plot info <ID> <World>} ein (kein Teleport für Spielende)</li>
  * </ul>
  * {@code *} oder keine Welt = alle Welten. 10 Einträge pro Seite, mit anklickbarem Blättern
- * („« zurück“/„weiter »“ führen den Befehl für die Nachbarseite direkt aus).
+ * („« zurück“/„weiter »“ führen den Befehl für die Nachbarseite direkt aus). Die Ausgabe ({@link #sendAll},
+ * {@link #sendFree}) nutzt auch {@code /city plots} und {@code /city free} ({@link CityCommand}).
  */
 final class PlotListCommand {
 
@@ -48,7 +49,7 @@ final class PlotListCommand {
     }
 
     /** Filter der Team-Liste. */
-    private enum Filter {
+    enum Filter {
         ALL(plot -> true), FREE(Plot::isFree), TAKEN(plot -> !plot.isFree());
 
         final Predicate<Plot> test;
@@ -80,16 +81,28 @@ final class PlotListCommand {
     }
 
     private static int showAll(CommandContext<CommandSourceStack> context, Filter filter) throws CommandSyntaxException {
-        CommandSender sender = context.getSource().getSender();
         World world = world(context);
-        List<Plot> all = plots(world, plot -> true);
+        return sendAll(context.getSource().getSender(), plots(world, plot -> true), filter, requestedPage(context),
+                "/plot plots " + filter.key() + " " + worldName(world) + " ");
+    }
+
+    private static int showFree(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        World world = world(context);
+        return sendFree(context.getSource().getSender(), plots(world, Plot::isFree), requestedPage(context),
+                "/plot free " + worldName(world) + " ");
+    }
+
+    /**
+     * Team-Liste: Kopfzeile mit Anzahl und freien Grundstücken von {@code all}, dann die Seite der nach
+     * {@code filter} ausgewählten Grundstücke; ein Klick auf eine Zeile fügt {@code /plot tp} ein.
+     *
+     * @param commandWithoutPage Befehl für das Blättern, die Seitenzahl wird angehängt
+     */
+    static int sendAll(CommandSender sender, List<Plot> all, Filter filter, int pageNumber, String commandWithoutPage) {
         List<Plot> selected = all.stream().filter(filter.test).toList();
         long freeCount = all.stream().filter(Plot::isFree).count();
-
-        Page page = page(context, selected.size());
+        Page page = page(sender, pageNumber, selected.size());
         if (page == null) {
-            Messages.send(sender, "plots.page-missing", Messages.arg("page", requestedPage(context)),
-                    Messages.arg("pages", Math.max(1, pageCount(selected.size()))));
             return 0;
         }
         Messages.send(sender, "plots.header", Messages.arg("count", all.size()), Messages.arg("free", freeCount),
@@ -102,41 +115,39 @@ final class PlotListCommand {
             String tp = "/plot tp " + plot.id() + " " + plot.world().getName();
             Component line = plot.isFree()
                     ? Messages.get(sender, "plots.entry-free", Messages.arg("id", plot.id()),
-                            Messages.arg("world", plot.world().getName()), Messages.arg("size", size(plot)))
+                            Messages.arg("location", location(plot)), Messages.arg("size", size(plot)))
                     : Messages.get(sender, "plots.entry-taken", Messages.arg("id", plot.id()),
-                            Messages.arg("world", plot.world().getName()), Messages.arg("owners", owners(plot)),
+                            Messages.arg("location", location(plot)), Messages.arg("owners", owners(plot)),
                             Messages.arg("size", size(plot)));
             sender.sendMessage(clickable(sender, line, tp));
         }
-        sendNavigation(sender, page, "/plot plots " + filter.key() + " " + worldName(world) + " ");
+        sendNavigation(sender, page, commandWithoutPage);
         return Command.SINGLE_SUCCESS;
     }
 
-    private static int showFree(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
-        CommandSender sender = context.getSource().getSender();
-        World world = world(context);
-        List<Plot> free = plots(world, Plot::isFree);
-        String price = Blockstead.getEconomy().format(Blockstead.getPluginConfig().getPlotPrice());
-
-        Page page = page(context, free.size());
+    /**
+     * Liste für alle: die Seite der freien Grundstücke aus {@code free} mit Größe und Preis; ein Klick auf eine Zeile
+     * fügt {@code /plot info} ein.
+     */
+    static int sendFree(CommandSender sender, List<Plot> free, int pageNumber, String commandWithoutPage) {
+        Page page = page(sender, pageNumber, free.size());
         if (page == null) {
-            Messages.send(sender, "plots.page-missing", Messages.arg("page", requestedPage(context)),
-                    Messages.arg("pages", Math.max(1, pageCount(free.size()))));
             return 0;
         }
         if (free.isEmpty()) {
             Messages.send(sender, "free.none");
             return Command.SINGLE_SUCCESS;
         }
-        Messages.send(sender, "free.header", Messages.arg("count", free.size()), Messages.arg("price", price),
+        Messages.send(sender, "free.header", Messages.arg("count", free.size()),
                 Messages.arg("page", page.number()), Messages.arg("pages", page.count()));
         for (Plot plot : page.of(free)) {
             String info = "/plot info " + plot.id() + " " + plot.world().getName();
+            String price = Blockstead.getEconomy().format(Blockstead.getPlotService().priceOf(plot).amount());
             Component line = Messages.get(sender, "free.entry", Messages.arg("id", plot.id()),
-                    Messages.arg("world", plot.world().getName()), Messages.arg("size", size(plot)));
+                    Messages.arg("location", location(plot)), Messages.arg("size", size(plot)), Messages.arg("price", price));
             sender.sendMessage(clickable(sender, line, info));
         }
-        sendNavigation(sender, page, "/plot free " + worldName(world) + " ");
+        sendNavigation(sender, page, commandWithoutPage);
         return Command.SINGLE_SUCCESS;
     }
 
@@ -151,18 +162,22 @@ final class PlotListCommand {
         }
     }
 
-    /** Gewünschte Seite; {@code null}, wenn es sie nicht gibt (eine leere Liste hat Seite 1). */
-    private static Page page(CommandContext<CommandSourceStack> context, int items) {
+    /** Gewünschte Seite; meldet und liefert {@code null}, wenn es sie nicht gibt (eine leere Liste hat Seite 1). */
+    private static Page page(CommandSender sender, int number, int items) {
         int count = Math.max(1, pageCount(items));
-        int number = requestedPage(context);
-        return number > count ? null : new Page(number, count);
+        if (number > count) {
+            Messages.send(sender, "plots.page-missing", Messages.arg("page", number), Messages.arg("pages", count));
+            return null;
+        }
+        return new Page(number, count);
     }
 
     private static int pageCount(int items) {
         return (items + PAGE_SIZE - 1) / PAGE_SIZE;
     }
 
-    private static int requestedPage(CommandContext<CommandSourceStack> context) {
+    /** Seite aus dem Argument {@code page}; ohne Angabe 1. */
+    static int requestedPage(CommandContext<CommandSourceStack> context) {
         return hasArgument(context, "page") ? IntegerArgumentType.getInteger(context, "page") : 1;
     }
 
@@ -201,7 +216,8 @@ final class PlotListCommand {
                 .then(Commands.literal(ALL_WORLDS).executes(command).then(page().executes(command)));
     }
 
-    private static RequiredArgumentBuilder<CommandSourceStack, Integer> page() {
+    /** Argument {@code [Seite]} (ab 1). */
+    static RequiredArgumentBuilder<CommandSourceStack, Integer> page() {
         return Commands.argument("page", IntegerArgumentType.integer(1));
     }
 
@@ -232,6 +248,11 @@ final class PlotListCommand {
             Blockstead.getPlotService().getPlots(candidate).stream().filter(filter).forEach(result::add);
         }
         return result;
+    }
+
+    /** Welt, mit Stadt davor, falls das Grundstück zu einer gehört, z.B. "Neustadt, world". */
+    private static String location(Plot plot) {
+        return Blockstead.getCities().cityOf(plot).map(city -> city.name() + ", ").orElse("") + plot.world().getName();
     }
 
     /** Grundfläche des umgebenden Rechtecks, z.B. "24×18". */

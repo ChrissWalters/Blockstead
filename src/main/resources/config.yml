@@ -107,6 +107,31 @@ plots:
     entity-painting-destroy: deny
     entity-item-frame-destroy: deny
 
+# Cities ("/city create <name>" from a WorldEdit selection, always from the bottom to the top of the world).
+# Outside of plots, only the people added with "/city trust" may build in a city – this protects the city's own
+# buildings, streets etc. On plots, only the plot counts: owners build as usual, city builders have no rights there.
+# A plot belongs to a city if it shares at least one block column with it (the city with the largest shared
+# area, if several). Plot price: own price of the plot ("/plot price") > price of the city ("/city price") >
+# plots.price.
+cities:
+  # WorldGuard priority of new cities. Must be lower than plots.priority (otherwise plots.priority - 1 is used).
+  priority: 0
+  # WorldGuard flags every new city is created with (format as in plots.default-flags).
+  # Careful: flags of a city also apply on every plot inside it that doesn't set the flag itself. Protection
+  # flags (use, interact, chest-access, build …) are therefore ignored here – "allow" would open the plots to
+  # strangers, "deny" would lock out their owners.
+  default-flags:
+    pvp: deny
+    tnt: deny
+    creeper-explosion: deny
+    other-explosion: deny
+    fire-spread: deny
+    lava-fire: deny
+    lightning: deny
+    enderman-grief: deny
+    entity-painting-destroy: deny
+    entity-item-frame-destroy: deny
+
 # Roles that owners can give on their plot ("/plot trust <name> <role>").
 # The highest role "owner" is built in and may do everything, including giving roles and giving the plot
 # back (the old key "besitzende" still works). Below it, as many roles as you like:

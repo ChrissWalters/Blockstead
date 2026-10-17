@@ -39,6 +39,18 @@ come from EssentialsX (or another plugin).
 3. Read the notes for the version in [CHANGELOG.md](../CHANGELOG.md) – especially new `config.yml` entries,
    which are not added automatically.
 
+### From 2.2.x to 2.3.0
+
+* **Cities** are new (see [Cities](#cities)). Existing plots and WorldGuard regions stay unchanged. To turn a
+  city region you maintained by hand into a Blockstead city, see [Taking over an existing city region](#taking-over-an-existing-city-region).
+* **`config.yml`:** new section `cities` (priority and default flags of new cities). Without it, priority 0
+  and the default flags of the template apply.
+* **Permissions:** new are `bs.city` (everyone), `bs.city.manage`, `bs.city.trust` and `bs.plot.price` (Op).
+  If players get their permissions explicitly in LuckPerms, add `bs.city`.
+* Plot data stays in WorldGuard: name, prices and texts are flags of the regions (`blockstead-name`,
+  `blockstead-price`, `blockstead-greeting`, `blockstead-farewell`). The database is unchanged; going back to
+  2.2.x works (the flags then simply have no effect).
+
 ### From 2.0.x to 2.1.0
 
 * **Languages:** all texts come from language files (see [Languages](#languages)). Without any change to
@@ -94,10 +106,11 @@ New plots have no owners. Players buy them with `/plot claim`, staff give them o
 entering, the translated default message is shown; you set a custom text with the WorldGuard flag
 `region-name`, e.g. `/rg flag plot_3 region-name Welcome to Alex's place` (it then applies to all languages).
 
-### Overlaps and city areas
+### Overlaps
 
 * **Plots must not overlap.** `/plot create` refuses a selection that touches an existing plot.
-* **Other regions may overlap plots** – e.g. a city region with streets in between. They need a **lower
+* **Other regions may overlap plots** – e.g. a city ([Cities](#cities)) or a city region you maintain by hand
+  with WorldGuard. They need a **lower
   priority** than the plots (default 10, `plots.priority`), simplest is 0: then the owners, roles and flags of
   the plots apply on the plots and the city region's rules on the streets. With the same or a higher priority
   the city region overrides the plots – `/plot create` then warns; change the priority with
@@ -106,6 +119,56 @@ entering, the translated default message is shown; you set a custom text with th
   the parent region – every member of the city could then build on every plot.
 * At startup, the consistency check reports overlapping plots and regions with a too high priority in the log
   (without changing anything).
+
+## Cities
+
+A city is a WorldGuard region managed by Blockstead (`city_<name>`), from the lowest to the highest point of
+the world. It protects everything the city itself owns:
+
+* **Outside of plots** only the people added with `/city trust` may build – streets, squares and the city's
+  buildings can't be griefed. Staff with WorldGuard bypass (`/rg bypass`) can always build.
+* **On plots** only the plot counts (plots have a higher priority, `plots.priority` > `cities.priority`):
+  owners and roles work as before, city builders have no rights there.
+* A plot **belongs to a city** if it shares at least one block column with it – also if it reaches beyond
+  the city's border. If it touches several cities, the one with the largest shared area counts (`/plot create`
+  points that out). Cities must not overlap each other. Plots outside of cities work as before.
+* **Price** of a plot: its own price (`/plot price`) > the price of its city (`/city price`) > `plots.price`.
+  Refunds are always the amount that was actually paid.
+* **Greeting and farewell:** when entering or leaving, everyone sees a translated default text ("Welcome to
+  Newtown!"). `/city greeting` and `/city farewell` set a custom text (MiniMessage, `<city>` = name of the
+  city; it then applies to all languages), `default` restores the default text, `off` turns the message off.
+
+| Command | Description | Permission |
+|---|---|---|
+| `/city`, `/city help` | Clickable overview | `bs.city` |
+| `/city list` | All cities with plots, free plots and price | `bs.city` |
+| `/city info [City]` | Plots, price; for staff also builders, greeting and farewell | `bs.city` |
+| `/city free <City> [page]` | Free plots of the city | `bs.plot.free` |
+| `/city plots <City> [all\|free\|taken] [page]` | All plots of the city, like `/plot plots` | `bs.plot.list.all` |
+| `/city create <Name>` | Create a city from the WorldEdit selection (in the game only); name: letters, digits, `-`, `_`, unique on the server | `bs.city.manage` |
+| `/city redefine <City>` | Replace the area with the WorldEdit selection; everything else stays (in the game only) | `bs.city.manage` |
+| `/city remove <City>` | Delete the city (asks for confirmation); its plots stay | `bs.city.manage` |
+| `/city price <City> <amount\|none>` | Price of the plots in the city; `none` = default price | `bs.city.manage` |
+| `/city greeting <City> <text\|default\|off>` | Message when entering | `bs.city.manage` |
+| `/city farewell <City> <text\|default\|off>` | Message when leaving | `bs.city.manage` |
+| `/city trust <City> <Name>`, `/city untrust <City> <Name>` | Who may build in the city outside of plots | `bs.city.trust` |
+
+Everything except `create`, `redefine` and `info` without a name also works from the console.
+
+**Flags of a city apply on its plots, too**, as long as a plot doesn't set the flag itself (WorldGuard takes
+the value of the highest priority that sets it). That's why `cities.default-flags` ignores protection flags
+like `use`, `interact` or `chest-access`: `allow` would open the doors and chests on all plots to strangers,
+`deny` would lock out their owners. Don't set them on a city with `/rg flag` either. Consequence: doors and
+buttons in the city area can only be used by city builders – put public doors on a plot of their own if
+needed.
+
+### Taking over an existing city region
+
+1. `/rg select <old region>` – WorldGuard sets your WorldEdit selection to the region.
+2. `/city create <Name>` – creates the city with the same area.
+3. Add the builders with `/city trust`, then delete the old region: `/rg remove <old region>`.
+
+Flags you set on the old region by hand are not copied; set them again with `/rg flag city_<name> …` if needed.
 
 ## Staff commands
 
@@ -122,6 +185,7 @@ and **required from the server console**, e.g. `plot assign plot_3 Alex world`.
 | `/plot snapshot <ID> [World]` | Save the current state as the reset snapshot | `bs.plot.snapshot` |
 | `/plot tp <ID> [World]`, `/plot teleport …` | Teleport to a plot – as central as possible (distance to the edge, close to the centroid) and never onto lava, fire or similar (in the game only) | `bs.plot.tp` |
 | `/plot list <Name>` | Plots of another person | `bs.plot.list.others` |
+| `/plot price <ID> <amount\|none> [World]` | Own price of a plot, overrides the price of the city; `none` = city or default price again | `bs.plot.price` |
 | `/plot plots [all\|free\|taken] [World\|*] [page]` | All plots of one world or of all worlds (`*`, default), with status, owners and size; 10 per page, « back / next » are clickable; clicking a line puts `/plot tp <ID> <World>` into the chat | `bs.plot.list.all` |
 | `/plot trust`, `/plot untrust` on other people's plots | Manage roles like an owner | `bs.plot.trust.others` |
 | – | Not restricted by plot roles | `bs.plot.bypass` |
@@ -134,7 +198,7 @@ snapshot (plots from before version 1.0.0), `reset` is refused and nothing chang
 main thread – with large plots the server may stall briefly.
 
 **From the console** you can use `info`, `trust`, `untrust`, `remove`, `assign`, `unassign`, `reset`,
-`snapshot`, `list <Name>`, `plots`, `free` and `/announce`.
+`snapshot`, `price`, `list <Name>`, `plots`, `free`, `/city` (see [Cities](#cities)) and `/announce`.
 
 **Refunds:** when a plot is released or deleted, the price goes back through the economy plugin to the person
 who paid. If that can't be booked (e.g. the economy plugin is missing), the plot is released anyway; the log
@@ -153,7 +217,8 @@ else through LuckPerms, e.g. `lp group team permission set bs.plot.assign true`.
 | `bs.plot.unclaim` | everyone | Giving your own plot back |
 | `bs.plot.home` | everyone | Setting a home and teleporting there |
 | `bs.plot.trust` | everyone | Giving roles on your own plots |
-| `bs.plot.free` | everyone | `/plot free [World\|*] [page]` – list of free plots |
+| `bs.plot.free` | everyone | `/plot free [World\|*] [page]` and `/city free` – list of free plots |
+| `bs.city` | everyone | `/city`, `/city list`, `/city info` |
 | all other `bs.*` | Op | see staff commands |
 
 `/blockstead` (version, licence, source code) needs no permission.
@@ -194,6 +259,7 @@ restart.
 | `backups` | Backup at startup on/off, number of backups kept |
 | `economy` | `import-old-balances`: transfer old balances from 1.x once (currency name and starting balance are set in the economy plugin) |
 | `plots` | Price (a whole number in the economy plugin's currency), waiting time for `unclaim reset`, WorldGuard priority, default flags of new plots |
+| `cities` | WorldGuard priority (lower than `plots.priority`) and default flags of new cities |
 | `roles` | Roles below "owner": rights (`build`, `containers`, `doors`, `workstations`, `entities`, `home`), optional `aliases` (further keys) and `name` (fixed display name instead of a translation) |
 
 Notes:

@@ -39,6 +39,19 @@ Währung selbst kommen von EssentialsX (bzw. einem anderen Plugin).
 3. Hinweise zur jeweiligen Version in [CHANGELOG.de.md](../CHANGELOG.de.md) lesen – insbesondere neue
    Einträge der `config.yml`, die nicht automatisch ergänzt werden.
 
+### Von 2.2.x auf 2.3.0
+
+* **Städte** sind neu (siehe [Städte](#städte)). Bestehende Grundstücke und WorldGuard-Regionen bleiben
+  unverändert. Eine bisher von Hand gepflegte Stadtregion wird so zur Blockstead-Stadt:
+  [Bestehende Stadtregion übernehmen](#bestehende-stadtregion-übernehmen).
+* **`config.yml`:** neuer Abschnitt `cities` (Priorität und Standard-Flags neuer Städte). Ohne ihn gelten
+  Priorität 0 und die Standard-Flags der Vorlage.
+* **Rechte:** neu sind `bs.city` (alle), `bs.city.manage`, `bs.city.trust` und `bs.plot.price` (Op). Wer
+  Spielenden ihre Rechte in LuckPerms ausdrücklich gibt, ergänzt `bs.city`.
+* Die Daten bleiben in WorldGuard: Name, Preise und Texte sind Flags der Regionen (`blockstead-name`,
+  `blockstead-price`, `blockstead-greeting`, `blockstead-farewell`). Die Datenbank ist unverändert; zurück auf
+  2.2.x geht (die Flags wirken dann einfach nicht).
+
 ### Von 2.0.x auf 2.1.0
 
 * **Sprachen:** Alle Texte kommen aus Sprachdateien (siehe [Sprachen](#sprachen)). Ohne Änderung an der
@@ -96,11 +109,12 @@ mit `/plot assign`. Beim Betreten erscheint die übersetzte Standardmeldung; ein
 der WorldGuard-Flag `region-name`, z.B. `/rg flag plot_3 region-name Willkommen bei Alex` (der gilt dann für
 alle Sprachen).
 
-### Überlappungen und Stadtbereiche
+### Überlappungen
 
 * **Grundstücke dürfen sich nicht überlappen.** `/plot create` lehnt eine Auswahl ab, die ein bestehendes
   Grundstück berührt.
-* **Andere Regionen dürfen Grundstücke überlappen** – z.B. eine Stadtregion mit Straßen dazwischen. Sie
+* **Andere Regionen dürfen Grundstücke überlappen** – z.B. eine Stadt ([Städte](#städte)) oder eine von Hand
+  in WorldGuard gepflegte Stadtregion. Sie
   brauchen dafür eine **niedrigere Priorität** als die Grundstücke (Standard 10, `plots.priority`), am
   einfachsten 0: Dann gelten auf den Grundstücken deren Besitzende, Rollen und Flags, auf den Straßen die
   Regeln der Stadtregion. Bei gleicher oder höherer Priorität überstimmt die Stadtregion die Grundstücke –
@@ -109,6 +123,61 @@ alle Sprachen).
   Mitglieder der Eltern-Region – alle Mitglieder der Stadt dürften dann auf jedem Grundstück bauen.
 * Beim Start meldet die Konsistenzprüfung überlappende Grundstücke und Regionen mit zu hoher Priorität im
   Log (ohne etwas zu ändern).
+
+## Städte
+
+Eine Stadt ist eine WorldGuard-Region, die Blockstead verwaltet (`city_<Name>`), vom tiefsten bis zum höchsten
+Punkt der Welt. Sie schützt alles, was der Stadt selbst gehört:
+
+* **Außerhalb der Grundstücke** bauen nur die Personen, die mit `/city trust` eingetragen sind – Straßen,
+  Plätze und Gebäude der Stadt lassen sich nicht griefen. Das Team mit WorldGuard-Bypass (`/rg bypass`) kann
+  immer bauen.
+* **Auf Grundstücken** zählt nur das Grundstück (Grundstücke haben die höhere Priorität, `plots.priority` >
+  `cities.priority`): Besitzende und Rollen funktionieren wie bisher, wer in der Stadt bauen darf, hat dort
+  keine Rechte.
+* Ein Grundstück **gehört zu einer Stadt**, wenn es mindestens eine Blockspalte mit ihr teilt – auch wenn es
+  über die Stadtgrenze hinausragt. Berührt es mehrere Städte, gilt die mit der größten gemeinsamen Fläche
+  (`/plot create` weist darauf hin). Städte dürfen sich nicht überlappen. Grundstücke außerhalb von Städten
+  funktionieren wie bisher.
+* **Preis** eines Grundstücks: eigener Preis (`/plot price`) > Preis seiner Stadt (`/city price`) >
+  `plots.price`. Erstattet wird immer der tatsächlich bezahlte Betrag.
+* **Begrüßung und Abschied:** Beim Betreten und Verlassen sehen alle einen übersetzten Standardtext
+  („Willkommen in Neustadt!“). `/city greeting` und `/city farewell` setzen einen eigenen Text (MiniMessage,
+  `<city>` = Name der Stadt; er gilt dann für alle Sprachen), `default` stellt den Standardtext wieder her,
+  `off` schaltet die Meldung ab.
+
+| Befehl | Beschreibung | Recht |
+|---|---|---|
+| `/city`, `/city help` | Anklickbare Übersicht | `bs.city` |
+| `/city list` | Alle Städte mit Grundstücken, freien Grundstücken und Preis | `bs.city` |
+| `/city info [City]` | Grundstücke, Preis; fürs Team auch Baurechte, Begrüßung und Abschied | `bs.city` |
+| `/city free <City> [Seite]` | Freie Grundstücke der Stadt | `bs.plot.free` |
+| `/city plots <City> [all\|free\|taken] [Seite]` | Alle Grundstücke der Stadt, wie `/plot plots` | `bs.plot.list.all` |
+| `/city create <Name>` | Stadt aus der WorldEdit-Auswahl anlegen (nur im Spiel); Name: Buchstaben, Ziffern, `-`, `_`, auf dem Server eindeutig | `bs.city.manage` |
+| `/city redefine <City>` | Fläche durch die WorldEdit-Auswahl ersetzen; alles andere bleibt (nur im Spiel) | `bs.city.manage` |
+| `/city remove <City>` | Stadt löschen (mit Sicherheitsabfrage); ihre Grundstücke bleiben | `bs.city.manage` |
+| `/city price <City> <Betrag\|none>` | Preis der Grundstücke in der Stadt; `none` = Standardpreis | `bs.city.manage` |
+| `/city greeting <City> <Text\|default\|off>` | Meldung beim Betreten | `bs.city.manage` |
+| `/city farewell <City> <Text\|default\|off>` | Meldung beim Verlassen | `bs.city.manage` |
+| `/city trust <City> <Name>`, `/city untrust <City> <Name>` | Wer in der Stadt außerhalb der Grundstücke bauen darf | `bs.city.trust` |
+
+Alles außer `create`, `redefine` und `info` ohne Name geht auch aus der Konsole.
+
+**Flags einer Stadt gelten auch auf ihren Grundstücken**, solange ein Grundstück die Flag nicht selbst setzt
+(WorldGuard nimmt den Wert der höchsten Priorität, die sie setzt). Deshalb ignoriert `cities.default-flags`
+Schutz-Flags wie `use`, `interact` oder `chest-access`: `allow` würde Türen und Kisten auf allen Grundstücken
+für Fremde öffnen, `deny` die Besitzenden aussperren. Auch per `/rg flag` nicht an einer Stadt setzen. Folge:
+Türen und Knöpfe auf der Stadtfläche können nur Personen mit Baurecht in der Stadt benutzen – öffentliche
+Türen bei Bedarf auf ein eigenes Grundstück legen.
+
+### Bestehende Stadtregion übernehmen
+
+1. `/rg select <alte Region>` – WorldGuard setzt die WorldEdit-Auswahl auf die Region.
+2. `/city create <Name>` – legt die Stadt mit derselben Fläche an.
+3. Baurechte mit `/city trust` vergeben, dann die alte Region löschen: `/rg remove <alte Region>`.
+
+Von Hand gesetzte Flags der alten Region werden nicht übernommen; bei Bedarf mit `/rg flag city_<name> …` neu
+setzen.
 
 ## Team-Befehle
 
@@ -125,6 +194,7 @@ Welt) und **aus der Server-Konsole Pflicht**, z.B. `plot assign plot_3 Alex worl
 | `/plot snapshot <ID> [World]` | Aktuellen Zustand als Sicherung zum Zurücksetzen speichern | `bs.plot.snapshot` |
 | `/plot tp <ID> [World]`, `/plot teleport …` | Zu einem Grundstück teleportieren – möglichst mittig (Abstand zum Rand, nahe dem Flächenschwerpunkt) und nie auf Lava, Feuer o.Ä. (nur im Spiel) | `bs.plot.tp` |
 | `/plot list <Name>` | Grundstücke einer anderen Person | `bs.plot.list.others` |
+| `/plot price <ID> <Betrag\|none> [World]` | Eigener Preis eines Grundstücks, geht vor dem Preis der Stadt; `none` = wieder Stadt- bzw. Standardpreis | `bs.plot.price` |
 | `/plot plots [all\|free\|taken] [World\|*] [Seite]` | Alle Grundstücke einer Welt oder aller Welten (`*`, Standard) mit Status, Besitzenden und Größe; 10 pro Seite, « zurück / weiter » sind anklickbar; ein Klick auf eine Zeile schreibt `/plot tp <ID> <World>` in den Chat | `bs.plot.list.all` |
 | `/plot trust`, `/plot untrust` auf fremden Grundstücken | Rollen verwalten wie Besitzende | `bs.plot.trust.others` |
 | – | Wird von Grundstücks-Rollen nicht eingeschränkt | `bs.plot.bypass` |
@@ -137,7 +207,7 @@ Sekunden wiederholen. Ohne Sicherung (Grundstücke von vor Version 1.0.0) wird `
 geändert. Zurücksetzen läuft im Hauptthread – bei großen Grundstücken kann der Server kurz stocken.
 
 **Aus der Konsole** gehen `info`, `trust`, `untrust`, `remove`, `assign`, `unassign`, `reset`, `snapshot`,
-`list <Name>`, `plots`, `free` und `/announce`.
+`price`, `list <Name>`, `plots`, `free`, `/city` (siehe [Städte](#städte)) und `/announce`.
 
 **Erstattungen:** Beim Freigeben oder Löschen geht der Kaufpreis über das Economy-Plugin an die Person, die
 bezahlt hat. Kann das nicht gebucht werden (z.B. Economy-Plugin fehlt), wird das Grundstück trotzdem
@@ -156,7 +226,8 @@ anderen über LuckPerms, z.B. `lp group team permission set bs.plot.assign true`
 | `bs.plot.unclaim` | alle | Eigenes Grundstück zurückgeben |
 | `bs.plot.home` | alle | Zuhause setzen und hinteleportieren |
 | `bs.plot.trust` | alle | Rollen auf eigenen Grundstücken vergeben |
-| `bs.plot.free` | alle | `/plot free [World\|*] [Seite]` – Liste der freien Grundstücke |
+| `bs.plot.free` | alle | `/plot free [World\|*] [Seite]` und `/city free` – Liste der freien Grundstücke |
+| `bs.city` | alle | `/city`, `/city list`, `/city info` |
 | alle übrigen `bs.*` | Op | siehe Team-Befehle |
 
 `/blockstead` (Version, Lizenz, Quellcode) braucht kein Recht.
@@ -196,6 +267,7 @@ nach einem Neustart.
 | `backups` | Sicherung beim Start an/aus, Anzahl der aufbewahrten Sicherungen |
 | `economy` | `import-old-balances`: alte Kontostände aus 1.x einmalig übertragen (Währungsname und Startguthaben stellt man im Economy-Plugin ein) |
 | `plots` | Preis (ganze Zahl in der Währung des Economy-Plugins), Wartezeit für `unclaim reset`, WorldGuard-Priorität, Standard-Flags neuer Grundstücke |
+| `cities` | WorldGuard-Priorität (niedriger als `plots.priority`) und Standard-Flags neuer Städte |
 | `roles` | Rollen unterhalb von „owner“: Rechte (`build`, `containers`, `doors`, `workstations`, `entities`, `home`), optional `aliases` (weitere Schlüssel) und `name` (fester Anzeigename statt Übersetzung) |
 
 Hinweise:

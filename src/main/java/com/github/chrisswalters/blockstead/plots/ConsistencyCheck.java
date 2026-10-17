@@ -1,5 +1,7 @@
 package com.github.chrisswalters.blockstead.plots;
 
+import com.github.chrisswalters.blockstead.cities.City;
+import com.github.chrisswalters.blockstead.cities.CityService;
 import com.github.chrisswalters.blockstead.storage.DataException;
 import com.github.chrisswalters.blockstead.storage.Database;
 import com.github.chrisswalters.blockstead.util.WorldGuardUtils;
@@ -16,8 +18,8 @@ import java.util.List;
 import java.util.logging.Logger;
 
 /**
- * Prüft beim Start, ob die Datenbank zu den WorldGuard-Regionen passt und ob sich Grundstücke problematisch
- * überlappen ({@link PlotOverlaps}).
+ * Prüft beim Start, ob die Datenbank zu den WorldGuard-Regionen passt und ob sich Grundstücke oder Städte
+ * problematisch überlappen ({@link PlotOverlaps}).
  *
  * <p>Meldet Einträge (Käufe, Homes, Rollen) zu Grundstücken, die es in WorldGuard nicht gibt –
  * z.B. weil eine Region per {@code /rg remove} statt {@code /plot remove} gelöscht oder WorldGuard-Daten
@@ -30,8 +32,9 @@ public final class ConsistencyCheck {
     }
 
     /** Führt die Prüfung aus und schreibt das Ergebnis ins Log. */
-    public static void run(Database database, PlotService plots, int plotPriority, Logger log) {
+    public static void run(Database database, PlotService plots, CityService cities, int plotPriority, Logger log) {
         checkOverlaps(plots, plotPriority, log);
+        checkCities(cities, log);
         List<String> problems = new ArrayList<>();
         for (String table : List.of("plot_claims", "homes", "plot_roles")) {
             try (Statement statement = database.getConnection().createStatement();
@@ -53,6 +56,27 @@ public final class ConsistencyCheck {
         }
         log.warning("Consistency check: " + problems.size() + " entry/entries for plots that do not exist in WorldGuard "
                 + "(nothing was deleted):");
+        problems.forEach(problem -> log.warning("  - " + problem));
+    }
+
+    /** Meldet Städte, die sich überlappen – dann ist nicht eindeutig, zu welcher ein Grundstück gehört. Ändert nichts. */
+    private static void checkCities(CityService cities, Logger log) {
+        List<String> problems = new ArrayList<>();
+        for (World world : Bukkit.getWorlds()) {
+            List<City> inWorld = cities.getCities(world);
+            for (City city : inWorld) {
+                List<ProtectedRegion> others = inWorld.stream().map(City::region)
+                        .filter(other -> city.id().compareTo(other.getId()) < 0).toList();
+                for (ProtectedRegion other : city.region().getIntersectingRegions(others)) {
+                    problems.add("cities " + city.name() + " and " + new City(world, other).name() + " in " + world.getName()
+                            + " overlap – use /city redefine to separate them");
+                }
+            }
+        }
+        if (problems.isEmpty()) {
+            return;
+        }
+        log.warning("Consistency check: " + problems.size() + " city overlap(s) (nothing was changed):");
         problems.forEach(problem -> log.warning("  - " + problem));
     }
 

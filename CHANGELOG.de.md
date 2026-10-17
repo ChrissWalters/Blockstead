@@ -2,6 +2,36 @@
 
 *In English: [CHANGELOG.md](CHANGELOG.md)*
 
+## 2.3.0
+
+Städte: Stadtgebiete als Teil von Blockstead – Schutz der städtischen Bauten, Begrüßung, Preis je Stadt.
+
+### Neu
+- `/city` mit `create`, `redefine`, `remove`, `list`, `info`, `free`, `plots`, `price`, `greeting`,
+  `farewell`, `trust` und `untrust`. Eine Stadt ist eine WorldGuard-Region vom tiefsten bis zum höchsten Punkt
+  der Welt, unterhalb der Priorität der Grundstücke: Außerhalb der Grundstücke bauen nur Personen, die mit
+  `/city trust` eingetragen sind; auf Grundstücken zählt nur das Grundstück.
+- Ein Grundstück gehört zu einer Stadt, wenn es mindestens eine Blockspalte mit ihr teilt (mehrere Städte: die
+  mit der größten gemeinsamen Fläche). Städte dürfen sich nicht überlappen. Grundstücke ohne Stadt
+  funktionieren wie bisher.
+- Preis je Stadt (`/city price`) und eigener Preis je Grundstück (`/plot price`, Recht `bs.plot.price`);
+  Reihenfolge: Grundstück > Stadt > `plots.price`.
+- Begrüßung und Abschied beim Betreten und Verlassen einer Stadt: übersetzter Standardtext oder eigener Text
+  je Stadt.
+- `/plot info` zeigt die Stadt und fürs Team, woher der Preis kommt; `/plot plots`, `/plot free` und
+  `/city list` zeigen die Stadt und den Preis je Grundstück.
+- Neue Rechte `bs.city` (alle), `bs.city.manage`, `bs.city.trust`, `bs.plot.price` (Op); neuer Abschnitt
+  `cities` in der `config.yml` (Priorität, Standard-Flags).
+
+### Geändert
+- `/plot free` zeigt den Preis je Grundstück statt eines Preises in der Kopfzeile; die Hilfe zu `/plot claim`
+  verweist für den Preis auf `/plot info`.
+
+### Hinweise zum Update von 2.2.x
+- Spielende mit ausdrücklich gesetzten LuckPerms-Rechten brauchen `bs.city`. Der Abschnitt `cities` kann aus
+  der neuen Vorlage übernommen werden; ohne ihn gelten dessen Standardwerte.
+- Daten der Städte stehen als WorldGuard-Flags an den Regionen; die Datenbank ist unverändert.
+
 ## 2.2.0
 
 Grundstückslisten: eine Übersicht aller Grundstücke für das Team und der freien Grundstücke für alle.

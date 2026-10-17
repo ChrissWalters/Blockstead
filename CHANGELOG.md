@@ -2,6 +2,34 @@
 
 *Auf Deutsch: [CHANGELOG.de.md](CHANGELOG.de.md)*
 
+## 2.3.0
+
+Cities: city areas as part of Blockstead – protection of the city's own buildings, greeting, price per city.
+
+### New
+- `/city` with `create`, `redefine`, `remove`, `list`, `info`, `free`, `plots`, `price`, `greeting`,
+  `farewell`, `trust` and `untrust`. A city is a WorldGuard region from the lowest to the highest point of the
+  world, below the priority of plots: outside of plots only the people added with `/city trust` may build;
+  on plots only the plot counts.
+- A plot belongs to a city if it shares at least one block column with it (several cities: the one with the
+  largest shared area). Cities must not overlap. Plots without a city work as before.
+- Price per city (`/city price`) and own price per plot (`/plot price`, permission `bs.plot.price`); order:
+  plot > city > `plots.price`.
+- Greeting and farewell when entering and leaving a city: translated default text or a custom text per city.
+- `/plot info` shows the city and, for staff, where the price comes from; `/plot plots`, `/plot free` and
+  `/city list` show the city and the price per plot.
+- New permissions `bs.city` (everyone), `bs.city.manage`, `bs.city.trust`, `bs.plot.price` (Op); new
+  `config.yml` section `cities` (priority, default flags).
+
+### Changed
+- `/plot free` shows the price per plot instead of one price in the header; the help of `/plot claim` refers
+  to `/plot info` for the price.
+
+### Notes on updating from 2.2.x
+- Players with explicit LuckPerms permissions need `bs.city`. The `cities` section can be taken from the new
+  template; without it, its defaults apply.
+- City data is stored as WorldGuard flags; the database is unchanged.
+
 ## 2.2.0
 
 Plot lists: an overview of all plots for staff and of the free plots for everyone.

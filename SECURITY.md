@@ -32,8 +32,9 @@ purpose.
 | Area | Measure |
 |---|---|
 | Plots | WorldGuard keeps strangers out; roles additionally restrict members, never the other way round |
+| Cities | Lower priority than plots, so city builders get no rights on plots; protection flags are not allowed as default flags of cities (they would apply on the plots inside) |
 | Commands | Every subcommand checks its permission; without it, it isn't even shown |
-| Chat | Players' messages are never parsed as formatting (no colour, click or hover codes); in staff texts (`/announce`, `join-info`, language files) clicks that run commands are blocked |
+| Chat | Players' messages are never parsed as formatting (no colour, click or hover codes); in staff texts (`/announce`, `join-info`, city greetings, language files) clicks that run commands are blocked |
 | Placeholders | Values inserted into translated texts (names, IDs …) are never parsed as formatting |
 | Database | Prepared SQL statements only |
 | Currency | Payment before the plot is given out; bookings through the economy plugin, failed refunds in the log |

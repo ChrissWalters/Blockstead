@@ -23,6 +23,10 @@ das Team.
 Auf deinem Grundstück darf niemand etwas anfassen, dem du keine Rolle gegeben hast – auch keine Türen
 öffnen. Beim Betreten und Verlassen eines Grundstücks siehst du, wo du bist.
 
+Viele Grundstücke liegen in einer **Stadt**. Beim Betreten wirst du begrüßt; außerhalb der Grundstücke –
+Straßen, Plätze, die Gebäude der Stadt – baut nur das Team, dort kann also nichts kaputtgemacht werden. Eine
+Stadt kann einen eigenen Grundstückspreis haben.
+
 ## Befehle
 
 `[ID]` kannst du weglassen – dann gilt das Grundstück, auf dem du gerade stehst. Grundstücks-IDs sehen so
@@ -42,6 +46,9 @@ Hilfe und Meldungen kommen in deiner Sprache.
 | `/plot untrust <Name> [ID]` | Rolle wieder wegnehmen |
 | `/plot unclaim [ID]` | Grundstück zurückgeben – du bekommst den Kaufpreis zurück, alles Gebaute bleibt stehen |
 | `/plot unclaim [ID] reset` | Zurückgeben **und** auf den Ursprungszustand zurücksetzen (mit Sicherheitsabfrage) |
+| `/city list` | Alle Städte, mit Anzahl der Grundstücke, freien Grundstücken und Preis |
+| `/city info [City]` | Infos zu einer Stadt (ohne Name: die Stadt, in der du bist) |
+| `/city free <City>` | Freie Grundstücke einer Stadt |
 | `/blockstead` | Version, Lizenz und Quellcode des Plugins |
 
 Was davon du nutzen darfst, legt der Server fest – Befehle ohne Berechtigung werden dir gar nicht erst

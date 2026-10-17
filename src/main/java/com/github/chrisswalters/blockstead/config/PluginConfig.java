@@ -53,12 +53,15 @@ public class PluginConfig {
     private final int resetCooldownMinutes;
     private final int plotPriority;
     private final Map<Flag<?>, Object> defaultPlotFlags;
+    private final int cityPriority;
+    private final Map<Flag<?>, Object> defaultCityFlags;
     private final Map<String, PlotRole> roles;
 
     private PluginConfig(String language, String fallbackLanguage, boolean displayEnabled, String chatFormat, String tabFormat, boolean tabSorting, boolean nametag,
                          List<Component> joinInfo, String announcePrefix, boolean announceTitle, boolean announceSound,
                          boolean backupsEnabled, int backupsKeep, boolean importOldBalances, long plotPrice,
-                         int resetCooldownMinutes, int plotPriority, Map<Flag<?>, Object> defaultPlotFlags, Map<String, PlotRole> roles) {
+                         int resetCooldownMinutes, int plotPriority, Map<Flag<?>, Object> defaultPlotFlags,
+                         int cityPriority, Map<Flag<?>, Object> defaultCityFlags, Map<String, PlotRole> roles) {
         this.language = language;
         this.fallbackLanguage = fallbackLanguage;
         this.displayEnabled = displayEnabled;
@@ -77,6 +80,8 @@ public class PluginConfig {
         this.resetCooldownMinutes = resetCooldownMinutes;
         this.plotPriority = plotPriority;
         this.defaultPlotFlags = Collections.unmodifiableMap(defaultPlotFlags);
+        this.cityPriority = cityPriority;
+        this.defaultCityFlags = Collections.unmodifiableMap(defaultCityFlags);
         this.roles = Collections.unmodifiableMap(roles);
     }
 
@@ -107,14 +112,27 @@ public class PluginConfig {
         long plotPrice = nonNegative(config.getLong("plots.price", 100), "plots.price", log);
         int resetCooldownMinutes = Math.max(0, config.getInt("plots.reset-cooldown-minutes", 10));
         int priority = config.getInt("plots.priority", 10);
-        Map<Flag<?>, Object> flags = parseFlags(config.getConfigurationSection("plots.default-flags"), log);
+        Map<Flag<?>, Object> flags = parseFlags(config.getConfigurationSection("plots.default-flags"), "plots.default-flags", log);
+        // Städte müssen unter den Grundstücken liegen, sonst überstimmen sie deren Besitzende und Flags
+        int cityPriority = config.getInt("cities.priority", 0);
+        if (cityPriority >= priority) {
+            log.warning("config.yml: 'cities.priority' (" + cityPriority + ") must be lower than 'plots.priority' ("
+                    + priority + "), using " + (priority - 1) + ".");
+            cityPriority = priority - 1;
+        }
+        // Fehlt der Abschnitt (config.yml von vor 2.3.0), gelten die Flags der mitgelieferten Vorlage – sonst hätten
+        // neue Städte auf aktualisierten Servern keinen Schutz vor PvP, TNT usw.
+        ConfigurationSection citySection = config.contains("cities.default-flags", true)
+                ? config.getConfigurationSection("cities.default-flags")
+                : config.getDefaults() == null ? null : config.getDefaults().getConfigurationSection("cities.default-flags");
+        Map<Flag<?>, Object> cityFlags = parseFlags(citySection, "cities.default-flags", log);
         Map<String, PlotRole> roles = parseRoles(config.getConfigurationSection("roles"), log);
         log.info("Configuration loaded: plot price " + plotPrice + ", plot priority " + priority + ", " + flags.size()
-                + " default flags, roles " + roles.keySet());
+                + " default flags, city priority " + cityPriority + ", " + cityFlags.size() + " city flags, roles " + roles.keySet());
         return new PluginConfig(language, fallbackLanguage, displayEnabled, chatFormat, tabFormat, tabSorting, nametag,
                 joinInfo, announcePrefix, announceTitle, announceSound,
                 backupsEnabled, backupsKeep, importOldBalances, plotPrice,
-                resetCooldownMinutes, priority, flags, roles);
+                resetCooldownMinutes, priority, flags, cityPriority, cityFlags, roles);
     }
 
     /** Negative Beträge sind nicht erlaubt und werden mit Warnung durch 0 ersetzt. */
@@ -164,8 +182,15 @@ public class PluginConfig {
         return roles;
     }
 
-    /** Wandelt Einträge "Flagname: Wert" über die WorldGuard-Flag-Registry in echte Flags um. */
-    private static Map<Flag<?>, Object> parseFlags(ConfigurationSection section, Logger log) {
+    /**
+     * Wandelt Einträge "Flagname: Wert" über die WorldGuard-Flag-Registry in echte Flags um. Schutz-Flags werden
+     * übersprungen: bei Grundstücken sperren sie Besitzende aus; bei Städten gelten sie zusätzlich auf allen
+     * Grundstücken darin, die die Flag nicht selbst setzen ({@code deny} sperrt dort die Besitzenden aus,
+     * {@code allow} öffnet sie für Fremde).
+     *
+     * @param path Pfad in der config.yml für Log-Meldungen
+     */
+    private static Map<Flag<?>, Object> parseFlags(ConfigurationSection section, String path, Logger log) {
         Map<Flag<?>, Object> flags = new HashMap<>();
         if (section == null) {
             return flags;
@@ -179,8 +204,9 @@ public class PluginConfig {
             }
             String input = section.getString(name);
             if (isMemberBlockingFlag(flag)) {
-                log.warning("config.yml: Flag '" + name + "' in plots.default-flags ignored – it would lock out owners and "
-                        + "members too. WorldGuard keeps strangers out anyway. Please remove it from config.yml.");
+                log.warning("config.yml: Flag '" + name + "' in " + path + " ignored – protection flags would lock out owners "
+                        + "and members (or, on cities, open plots inside to strangers). WorldGuard keeps strangers out anyway. "
+                        + "Please remove it from config.yml.");
                 continue;
             }
             try {
@@ -301,5 +327,15 @@ public class PluginConfig {
     /** Flags für neue Grundstücke (nicht veränderbar; vor dem Setzen ggf. kopieren). */
     public Map<Flag<?>, Object> getDefaultPlotFlags() {
         return defaultPlotFlags;
+    }
+
+    /** WorldGuard-Priorität für neue Städte; immer niedriger als {@link #getPlotPriority()}. */
+    public int getCityPriority() {
+        return cityPriority;
+    }
+
+    /** Flags für neue Städte (nicht veränderbar; vor dem Setzen ggf. kopieren). */
+    public Map<Flag<?>, Object> getDefaultCityFlags() {
+        return defaultCityFlags;
     }
 }

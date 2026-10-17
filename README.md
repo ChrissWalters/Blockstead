@@ -21,6 +21,10 @@ shown by your server's command, usually `/balance`. The team gives out further p
 Nobody can touch anything on your plot unless you have given them a role – not even open doors. When you
 enter or leave a plot, you see where you are.
 
+Many plots lie in a **city**. You are greeted when you enter it; outside the plots – streets, squares, the
+city's own buildings – only the team builds, so nothing there can be destroyed. A city can have its own plot
+price.
+
 ## Commands
 
 You can leave out `[ID]` – then the plot you are standing on is used. Plot IDs look like this: `plot_3`.
@@ -39,6 +43,9 @@ All commands have tab completion.
 | `/plot untrust <name> [ID]` | Take the role away again |
 | `/plot unclaim [ID]` | Give the plot back – you get the price back, everything you built stays |
 | `/plot unclaim [ID] reset` | Give it back **and** restore its original state (asks for confirmation) |
+| `/city list` | All cities, with number of plots, free plots and price |
+| `/city info [City]` | Information about a city (without a name: the city you are in) |
+| `/city free <City>` | Free plots of a city |
 | `/blockstead` | Version, licence and source code of the plugin |
 
 What you may use is decided by the server – commands you have no permission for aren't shown at all.
